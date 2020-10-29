@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  <mapper namespace="com.ctw.mapper.UserMapper">	
+  	<select id="selectUserById" parameterType="String" resultType="user">
+  	select * from user where id = #{id} and id != "00000" and id != "00001"
+  	</select>
+  	
+  	<select id="selectAllUser" resultType="user">
+  	select * from user where id != "00000" and id !="00001"
+  	</select>
+  	
+  	<insert id="insertUser" parameterType="user">
+  	insert into user(id, password, wechat_id, isAdmin, username) values(#{id}, #{password}, #{wechat_id},#{isAdmin}, #{username}) 
+  	</insert>
+  	
+  	<update id="updateUser" parameterType="user">
+  	update user set password = #{password}, username = #{username}, wechat_id = #{wechat_id}, isAdmin = #{isAdmin} where id = #{id}
+  	</update>
+  	
+  	<delete id="deleteUserById" parameterType="String">
+  	delete from user where id = #{id}
+  	</delete>
+  	
+  	<update id="updateUserWechat_idById" parameterType="user">
+  	update user set wechat_id = #{wechat_id} where id = #{id}
+  	</update>
+  </mapper>

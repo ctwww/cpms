@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  <mapper namespace="com.ctw.mapper.ParameterMapper">
+	<select id="selectAllParameterByLink" resultType="parameter" parameterType="parameter">
+  	select * from parameter where link = #{link}
+  	</select>
+	
+	<delete id="deleteParameterByLink" parameterType="parameter">
+	delete from parameter where link = #{link}
+	</delete>
+	
+	<delete id="deleteAParameter" parameterType="parameter">
+	delete from parameter where link = #{link} and parameter = #{parameter}
+	</delete>
+	
+	<select id="selectAParameterByLinkAndParameter" resultType="parameter" parameterType="parameter">
+  	select * from parameter where link = #{link} and parameter = #{parameter}
+  	</select>
+  	
+  	<insert id="addAParameter" parameterType="parameter">
+  	insert into parameter(link, parameter, remarks) values(#{link}, #{parameter}, #{remarks})
+  	</insert>
+
+  </mapper>

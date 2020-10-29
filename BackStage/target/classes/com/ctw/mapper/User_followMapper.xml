@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  <mapper namespace="com.ctw.mapper.User_followMapper">
+   	<select id="selectAUser_followList" parameterType="String" resultType="user_follow">
+  	select * from user_follow where id = #{id}
+  	</select>
+  	
+  	<select id="selectAUser_follow" resultType="user_follow" parameterType="user_follow">
+  	select * from user_follow where id = #{id} and link = #{link}
+  	</select>
+  	
+  	<delete id="deleteAUser_follow" parameterType="user_follow">
+  	delete from user_follow where id = #{id} and link = #{link}
+  	</delete>
+  	
+  	<insert id="insertAUser_follow" parameterType="user_follow">
+  	insert into user_follow(id, link, follow_remarks) values(#{id}, #{link}, #{follow_remarks}) 
+  	</insert>
+  	
+  	<select id="selectAUser_followListByLink" parameterType="String" resultType="user_follow">
+  	select * from user_follow where link = #{link}
+  	</select>
+  </mapper>

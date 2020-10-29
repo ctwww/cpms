@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  <mapper namespace="com.ctw.mapper.My_serviceMapper">
+    <select id="selectAllServiceLink" resultType="String">
+  	select link from my_service
+  	</select>
+  	
+  	<select id="selectAllService" resultType="my_service">
+  	select * from my_service
+  	</select>
+  	
+  	<select id="selectServiceByLink" resultType="my_service" parameterType="my_service">
+  	select * from my_service where link = #{link}
+  	</select>
+  	
+  	<delete id="deleteAService" parameterType="my_service">
+  	delete from my_service where link = #{link}
+  	</delete>
+  	
+  	<insert id="insertAService" parameterType="my_service">
+  	insert into my_service(link, link_name, provider_name, isPass, remarks, type, img, isChecked, has_parameter) values(#{link}, #{link_name}, #{provider_name}, #{isPass}, #{remarks}, #{type}, #{img}, #{isChecked}, #{has_parameter}) 
+  	</insert>
+  	
+  	<update id="updateisPass" parameterType="my_service">
+  	update my_service set isPass = #{isPass} where link = #{link}
+  	</update>
+  	
+  	<select id="selectTypeCount" resultType="Integer" parameterType="my_service">
+  	select Count(*) from my_service where type = #{type}
+  	</select>
+  	
+  	<select id="selectAllUnckeckedService" resultType="my_service">
+  	select * from my_service where isChecked = false;
+  	</select>
+  	
+  	<update id="setIscheckedTrueByLink" parameterType="my_service">
+  	update my_service set isChecked = true where link = #{link}
+  	</update>
+  	
+  	<update id="updateAService" parameterType="my_service">
+  	update my_service set link = #{link}, link_name = #{link_name}, provider_name = #{provider_name}, isPass = #{isPass}, remarks = #{remarks}, type = #{type}, img = #{img}, isChecked = #{isChecked}, has_parameter = #{has_parameter} where link = #{ori_link}
+  	</update>
+  </mapper>

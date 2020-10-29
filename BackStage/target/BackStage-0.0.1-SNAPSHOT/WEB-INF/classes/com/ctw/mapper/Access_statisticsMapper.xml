@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  <mapper namespace="com.ctw.mapper.Access_statisticsMapper">
+  	<select id="getAllAccess" resultType="access_statistics">
+  	select * from access_statistics
+  	</select>
+  	
+  	<insert id="insertStatictics" parameterType="access_statistics">
+  	insert into access_statistics(date, link, sum) values(#{date}, #{link}, #{sum})
+  	</insert>
+  	
+  	<delete id="deleteAccessByDate" parameterType="access_statistics">
+  	delete from access_statistics where date &lt; #{date}
+  	</delete>
+  	
+  	<select id="selectAAccess" resultType="access_statistics" parameterType="access_statistics">
+  	select * from access_statistics where date = #{date} and link = #{link}
+  	</select>
+  	
+  	<update id="updateAAccess" parameterType="access_statistics">
+  	update access_statistics set sum = #{sum} where date = #{date} and link = #{link}
+  	</update>
+  </mapper>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  <mapper namespace="com.ctw.mapper.Front_socketMapper">
+  	
+  	<select id="selectFront_socket" resultType="front_socket">
+  	select * from front_socket
+  	</select>
+  	
+  	<update id="updateFront_socket" parameterType="front_socket">
+  	update front_socket set client_ip = #{client_ip},client_port = #{client_port} where socket_id = 0
+  	</update>
+  </mapper>

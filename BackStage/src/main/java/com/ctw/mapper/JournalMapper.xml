@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  <mapper namespace="com.ctw.mapper.JournalMapper">
+  
+  	<insert id="addAJournal" parameterType="journal">
+  	insert into journal(id, date, illustrate, type, operation) values(#{id}, #{date}, #{illustrate}, #{type}, #{operation})
+  	</insert>
+  	
+  	<select id="selectAllJournal" resultType="journal">
+  	select * from journal
+  	</select>
+  	
+  	<select id="selectAllUserJournal" resultType="journal">
+  	select * from journal where type = "用户日志"
+  	</select>
+  	
+  	<select id="selectAllOperationJournal" resultType="journal">
+  	select * from journal where type = "操作日志"
+  	</select>
+  	
+  	<select id="selectAllFunctionJournal" resultType="journal">
+  	select * from journal where type = "系统日志"
+  	</select>
+  	
+  	<select id="selectAllSecurityJournal" resultType="journal">
+  	select * from journal where type = "安全日志"
+  	</select>
+  	
+  	<delete id="deleteJournalByDate" parameterType="journal">
+  	delete from journal where date &lt; #{date}
+  	</delete>
+  </mapper>
