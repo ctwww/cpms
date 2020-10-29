@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<title>哈工大微信校园门户管理系统</title>
+    <script src="https://cdn.bootcss.com/jquery/2.2.4/jquery.min.js"></script>
+    <link href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <!-- 分页 -->
+	<link rel="stylesheet" type="text/css" href="css/zxf_page.css"/>
+	<script type="text/javascript" src="js/zxf_page.js"></script>
+    <!--导入后端地址-->
+    <script type="text/javascript" src="js/server.js"></script>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <style type="text/css">
+    	#front_socket_div{
+   	        margin-bottom:10px;
+    	},
+    </style>
+    <script>
+    	$(document).ready(function(){
+    		checklogin();
+
+            var parameter_session = [];
+            window.sessionStorage.setItem("parameter",JSON.stringify(parameter_session));
+
+    		$("#account_management").click(function(){
+    			window.location.href="account_management.html";
+    		});
+
+    		$("#service_management").click(function(){
+    			window.location.href="service_management.html";
+    		});
+
+    		$("#log_view").click(function(){
+    			window.location.href="log_view.html";
+    		});
+
+    		$("#access_statistics").click(function(){
+    			window.location.href="access_statistics.html";
+    		});
+
+    		//修改前台socket
+    		$("#modify_front_socket").click(function(){
+    			if(!check_IP($("#front_ip").val())){
+    				alert("请输入正确的ip地址");
+    			}else{
+    				$.ajax({
+    				   	url:server_url + "/modify_front_socket",
+    			        type:"post",
+                        jsonp:"callback",
+                        timeout:5000,
+    			        data:{
+    			           	client_ip:$("#front_ip").val(),
+    			           	client_port:$("#front_port").val(),
+    			        },
+    			        success:function(result,status,xhr){
+    			            alert(result);
+    			            if(result == "success"){
+    			            	window.location.reload();
+    			            }
+    		            }
+    				}).done(function(result){
+                        if(result == "success"){
+                            var illustrate = "修改了前台socket信息：前台ip："+$("#front_ip").val()+"前台端口："+$("#front_port").val();
+                            addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"修改","操作日志");
+                        }
+                    }).fail(function(){
+                        var illustrate = "修改前台socket信息失败";
+                        addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"修改","安全日志");
+                    });
+    			}
+    		});
+
+            //关闭添加或修改服务的模态框
+            $("#close_modify_service").click(function(){
+                var para = [];
+                window.sessionStorage.setItem("parameter",JSON.stringify(para));
+            });
+
+    		//提交服务信息修改or新增信息
+    		$("#service_modify_submit").click(function(){
+    			//var service = JSON.parse(window.sessionStorage.getItem("service"));
+    			var ori_link = $("#inputLink").attr("placeholder");
+    			var link = $("#inputLink").val();
+    			var link_name = $("#inputLink_name").val();
+    			var provider_name = $("#inputProvider_name").val();
+    			var type = $("#inputType").val();
+    			var img_src = $("#inputImgShow").attr("src");
+    			var img = $("#inputImgShow").attr("src").substring(img_src.indexOf(",") + 1);
+    			var remarks = $("#inputRemarks").val();
+                var has_parameter_beforechange = $('input:radio[name="parameter"]:checked').val();
+                var has_parameter;
+                if(has_parameter_beforechange == "n"){
+                    has_parameter = false;
+                }else if(has_parameter_beforechange == "y"){
+                    has_parameter = true;
+                }
+
+    			var flag = true;
+    			if(link == null || link == ""){
+    				alert("服务链接不能为空！");
+    				return;
+    			}
+    			if(type == null || type == ""){
+    				alert("服务类型不能为空！");
+    				return;
+    			}
+    			if(link != ori_link){
+    				$.ajax({
+    					url:server_url + "/checkLinkExist",
+    					type:"post",
+    					async: false,
+    					data:{
+    						link:link,
+    					},
+    					success:function(result,status,xhr){
+		    				console.log(result);
+		    				if(result == "exist"){
+		    					alert("失败：存在相同链接！");
+		    					flag  = false;
+		    				}
+		    			},
+    					error: function (XMLHttpRequest, textStatus, errorThrown) {
+	                   	 	alert("失败：" + XMLHttpRequest.status);
+	              		} 
+    				});
+    			}
+    			if(flag){
+    				if($("#service_modify_submit").text() == "提交更改"){
+		    			$.ajax({
+		    				url:server_url + "/updateAService",
+		    				type:"post",
+                            jsonp:"callback",
+                            timeout:5000,
+		    				data:{
+		    					ori_link:ori_link,
+		    					link:link,
+		    					link_name:link_name,
+		    					provider_name:provider_name,
+		    					type:type,
+		    					img:img,
+		    					remarks:remarks,
+                                has_parameter:has_parameter
+		    				},
+		    				success:function(result,status,xhr){
+			    				alert(result);
+			    				window.location.href = "service_management.html";
+			    			},
+			    			error: function (XMLHttpRequest, textStatus, errorThrown) {
+			                    alert("修改失败：" + XMLHttpRequest.status);
+			                } 
+		    			}).done(function(result){
+                            if(result == "success"){
+                                var illustrate = "修改了链接为"+ori_link+"服务的信息：服务链接："+link+"服务名称："+link_name+"服务商："+provider_name+"服务类型："+type+"备注："+remarks+"服务图标base64码："+img;
+                                addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"修改","操作日志");
+                            }
+                        }).fail(function(){
+                            var illustrate = "修改了链接为"+ori_link+"服务的信息失败";
+                            addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"修改","安全日志");
+                        });
+    				}else if($("#service_modify_submit").text() == "提交"){
+    					addAService(link,link_name,provider_name,type,img,remarks,has_parameter);
+    				}
+    				
+    			}
+    		});
+
+            //参数设置：添加服务或修改服务
+            $("#show_parameter").click(function(){
+                if($("#myModalLabel_serivce").text() == "添加服务"){
+                    $("#parameter_list").empty();
+                    var parameter_session = JSON.parse(window.sessionStorage.getItem("parameter"));
+                    var flag = false;
+                    for(var i in parameter_session){
+                        if(parameter_session[i].aim == "添加服务"){
+                            flag = true;
+                            break;
+                        }
+                    }
+                    if(flag == true){
+                        refrashParameterList(parameter_session,"添加服务");
+                    }
+                    $('#parameter_modal').modal('show');
+                }else if($("#myModalLabel_serivce").text() == "服务信息修改"){
+                    getParameterListByLink($("#inputLink").attr("placeholder"));
+                    var parameter_session = JSON.parse(window.sessionStorage.getItem("parameter"));
+                    console.log(parameter_session);
+                    refrashParameterList(parameter_session,"服务信息修改");
+                    $('#parameter_modal').modal('show');
+                }
+
+            });
+
+            //新参数，弹出新模态框，对应添加或修改服务
+            $("#addParameter").click(function(){
+                $("#new_parameter").val("");
+                $("#new_remarks").val("");
+                $("#add_parameter_modal").modal('show');
+            });
+            //新参数，对应添加或修改服务
+            $("#submitANewParameter").click(function(){
+                if($("#new_parameter").val() != null){
+                    if($("#myModalLabel_serivce").text() == "添加服务"){
+                        var parameter_session = JSON.parse(window.sessionStorage.getItem("parameter"));
+                        for(var i in parameter_session){
+                            if(parameter_session[i].aim != "添加服务"){
+                                parameter_session = [];
+                            }
+                        }
+                        var flag = true;
+                        for(var i in parameter_session){
+                            if(parameter_session[i].parameter == $("#new_parameter").val()){
+                                flag = false;
+                            }
+                        }
+                        if(flag){
+                            var para = {};
+                            para.aim = "添加服务";
+                            para.parameter = $("#new_parameter").val();
+                            para.remarks = $("#new_remarks").val();
+                            parameter_session.push(para);
+                            window.sessionStorage.setItem("parameter",JSON.stringify(parameter_session));
+                            refrashParameterList(parameter_session,"添加服务");
+                            $("#add_parameter_modal").modal('hide');
+                        }else{
+                            alert("存在相同参数！");
+                        }
+                    }else if($("#myModalLabel_serivce").text() == "服务信息修改"){
+                        var flag = true;
+                        var parameter_session = JSON.parse(window.sessionStorage.getItem("parameter"));
+                        for(var i in parameter_session){
+                            if(parameter_session[i].parameter == $("#new_parameter").val()){
+                                flag = false;
+                            }
+                        }
+                        if(flag){
+                            var para = {};
+                            para.parameter = $("#new_parameter").val();
+                            para.remarks = $("#new_remarks").val();
+                            parameter_session.push(para);
+                            window.sessionStorage.setItem("parameter",JSON.stringify(parameter_session));
+                            addAParameter($("#inputLink").attr("placeholder"),$("#new_parameter").val(),$("#new_remarks").val());
+                            refrashParameterList(parameter_session,"服务信息修改");
+                            $("#add_parameter_modal").modal('hide');
+                        }else{
+                            alert("存在相同参数！");
+                        }
+                        
+                    }
+                }
+            });
+
+    		//添加服务
+    		$("#add_service").click(function(){
+    			$("#modify_service").modal("show");
+    			$("#myModalLabel_serivce").text("添加服务");
+    			$("#service_modify_submit").text("提交");
+    			$("#inputLink").val("");
+    			$("#inputLink").attr("placeholder","");
+    			$("#inputLink_name").val("");
+    			$("#inputType").val("");
+    			$("#inputProvider_name").val("");
+    			$("#inputImgShow").attr("src","");
+    			$("#inputImg").val("");
+                $("input[name='parameter']").get(0).checked=true; 
+                $("#show_parameter").attr("disabled","disabled");
+    			$("#inputRemarks").val("");
+    			$("#type_warning").text("");
+    			$("#link_warning").text("");
+    		});
+
+    		//提交新关注
+    		$("#submit_new_follow").click(function(){
+    			var link = $("#user_follow_link").text();
+    			var id = $("#follow_id_to_add").val();
+    		    $.ajax({
+    				url:server_url + "/addAUser_follow",
+    			    type:"post",
+                    jsonp:"callback",
+                    timeout:5000,
+    			    data:{
+    			        id:id,
+    			        link:link,
+    			    },
+    			    success:function(result,status,xhr){
+    			        console.log(result);
+    			        if(status == "success"){
+    			        	alert(result);
+    				    }else{
+    				        alert("系统错误");
+    				    }
+    				    getServiceFollow($("#user_follow_link").text());
+    		        }
+    			}).done(function(){
+                    var illustrate = "为id为"+id+"的用户添加了新的服务关注，服务链接为："+link;
+                    addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"新增","操作日志");
+                }).fail(function(){
+                    var illustrate = "为id为"+id+"的用户添加新的服务关注失败，服务链接为："+link;
+                    addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"新增","安全日志");
+                });
+    			$("#add_follow_modal").modal("hide");
+    		});
+
+    		//添加新关注
+    		$("#add_user_follow").click(function(){
+    			$("#follow_id_to_add").empty();
+    			$("#add_follow_modal").modal("show");
+    		});
+
+    		//待处理服务
+    		$("#waiting_checked_service_show").click(function(){
+    			$.ajax({
+	    			url:server_url + "/showUncheckedServiceList",
+	    			type:"get",
+                    jsonp:"callback",
+                    timeout:5000,
+	    			success:function(result,status,xhr){
+	    				if(status == "success" && result != null && result != ""){
+	    					console.log(result);
+	    					addUncheckedServiceList(result);
+	    				}
+	    			},
+	    			error: function (XMLHttpRequest, textStatus, errorThrown) {
+	                    alert("待处理服务信息无法加载！错误：" + XMLHttpRequest.status);
+	                } 
+	    		}).fail(function(){
+                    var illustrate = "获取待处理服务信息列表失败";
+                    addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"查询","安全日志");
+                });
+    			//模态框展现
+	    		$("#service_waiting_check").modal("show");
+    		});
+
+    		//完成待处理服务的处理
+    		$("#finish_service_check").click(function(){
+    			window.location.href="service_management.html";
+    		});
+
+    		//获取服务列表：（session）service
+    		$.ajax({
+    			url:server_url + "/showServiceList",
+    			type:"get",
+                jsonp:"callback",
+                timeout:5000,
+    			success:function(result,status,xhr){
+    				window.sessionStorage.setItem("service",JSON.stringify(result));
+    				if(status == "success" && result != null && result != ""){
+    					console.log(result);
+    					//addServiceList(result,1);
+    					addPage(calcutePageNum(result),1,1);
+    					check_waiting_service(result);
+    				}
+    			},
+    			error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    alert("服务信息无法加载！错误：" + XMLHttpRequest.status);
+                } 
+    		}).fail(function(){
+                var illustrate = "获取服务信息列表失败";
+                addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"查询","安全日志");
+            });
+
+    		//获取前台地址：（session）front_socket
+    		$.ajax({
+    			url:server_url + "/getFront_socket",
+    			type:"get",
+    			contentType:"application/json; charset=UTF-8",
+    			dataType:"json",
+                jsonp:"callback",
+                timeout:5000,
+    			success:function(result,status,xhr){
+    				console.log(result);
+    				window.sessionStorage.setItem("front_socket",JSON.stringify(result));
+    				if(result != null && result != ""){
+    					$("#front_ip").attr("placeholder",result[0].client_ip);
+    					$("#front_ip").val(result[0].client_ip);
+    					$("#front_port").attr("placeholder",result[0].client_port);
+    					$("#front_port").val(result[0].client_port);
+    				}
+    			},
+    			error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    alert("前台信息无法加载！错误：" + XMLHttpRequest.status);
+                } 
+    		}).fail(function(){
+                var illustrate = "获取服前台socket信息失败";
+                addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"查询","安全日志");
+            });
+
+
+    	});
+		
+		//添加待处理的服务列表
+		function addUncheckedServiceList(result){
+			$("#accordion_for_service_to_check").empty();
+			for(var i in result){
+    			var state;
+        		var img_url = "";
+        		var remarks;
+        		var provider_name;
+        		var panel;
+        		var state_color;
+                var has_parameter;
+        		if(result[i].isPass == true){
+        			state = "审核通过";
+        			panel = "panel-info";
+        			state_color = "color:black";
+        		}else{
+        			state = "审核未通过";
+        			panel = "panel-warning";
+        			state_color = "color:red";
+        		}
+        		if(result[i].provider_name == null || result[i].provider_name == ""){
+        			provider_name = "";
+        		}else{
+        			provider_name = result[i].provider_name;
+        		}
+        		if(result[i].remarks == null || result[i].remarks == ""){
+        			remarks = "";
+        		}else{
+        			remarks = result[i].remarks;
+        		}
+        		if(result[i].img != null || result[i].img != ""){
+        			img_url = "data:image/png;base64," + result[i].img;
+        		}
+                if(result[i].has_parameter == true){
+                    has_parameter = "是";
+                }else{
+                    has_parameter = "否";
+                }
+
+        		if(result[i].isChecked == false){
+        			$("#accordion_for_service_to_check").append('<div class="panel '+panel+'"><div class="panel-heading"><h4 class="panel-title"><a data-toggle="collapse" data-parent="#accordion_for_service_to_check" href="#collapseCheck_'+i+'">'+result[i].link+'</a></h4></div><div id="collapseCheck_'+i+'" class="panel-collapse collapse"><div class="panel-body"><div class="row clearfix"><div class="col-md-12 column"><form class="form-horizontal" role="form"><div class="form-group"><label class="col-sm-2 control-label">服务链接:</label><div class="col-sm-10"><p class="form-control-static">'+result[i].link+'</p></div></div><div class="form-group"><label class="col-sm-2 control-label">服务名称:</label><div class="col-sm-10"><p class="form-control-static">'+result[i].link_name+'</p></div></div><div class="form-group"><label class="col-sm-2 control-label">服务商:</label><div class="col-sm-10"><p class="form-control-static">'+provider_name+'</p></div></div><div class="form-group"><label class="col-sm-2 control-label">服务状态:</label><div class="col-sm-10"><p class="form-control-static" style="'+state_color+'">'+state+'</p></div></div><div class="form-group"><label class="col-sm-2 control-label">服务类型:</label><div class="col-sm-10"><p class="form-control-static">'+result[i].type+'</p></div></div><div class="form-group"><label class="col-sm-2 control-label">服务图标:</label><div class="col-sm-10"><img src="'+img_url+'" class="img-rounded" alt="该服务没有图标" width="36" height="36"></div></div><div class="form-group"><label class="col-sm-2 control-label">是否传参:</label><div class="col-sm-10"><p class="form-control-static">'+has_parameter+'</p></div><div class="form-group"><label class="col-sm-2 control-label">备注:</label><div class="col-sm-10"><p class="form-control-static">'+remarks+'</p></div></div><div class="form-group"><label class="col-sm-2 control-label">操作:</label><div class="col-sm-10"><button type="button" class="btn btn-primary btn-sm" id="add_unchecked_service_'+i+'">添加</button><button type="button" class="btn btn-danger btn-sm" id="delete_unchecked_service_'+i+'">删除</button><button type="button" class="btn btn-warning btn-sm" id="check_unchecked_service_'+i+'">重新审核</button></div></div></form></div></div></div></div></div>');
+        		}
+        		//为生成的按钮添加监听
+        		//添加服务
+        		$("#add_unchecked_service_" + i).on("click",function(){
+        			var r = $(this).attr("id").slice(22);
+        			var link = result[r].link;
+        			$.ajax({
+        				url:server_url + "/addUncheckedService",
+		    			type:"post",
+                        jsonp:"callback",
+                        timeout:5000,
+		    			data:{
+		    				link:link,
+		    			},
+		    			success:function(result,status,xhr){
+		    				console.log(result);
+		    				alert(result);
+		    				$("#accordion_for_service_to_check").empty();
+		    				$("#waiting_checked_service_show").click();
+		    			},
+        			}).done(function(){
+                        if(result == "success"){
+                            var illustrate = "审核通过了一个新的待处理服务，服务链接为："+link;
+                            addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"修改","操作日志");
+                        }
+                    }).fail(function(){
+                        var illustrate = "审核通过一个新的待处理服务失败，服务链接为："+link;
+                        addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"修改","安全日志");
+                    });
+        		});
+        		//删除服务
+        		$("#delete_unchecked_service_" + i).on("click",function(){
+        			var r = $(this).attr("id").slice(25);
+
+        			var link = result[r].link;
+        			var t = confirm("你确定要删除吗？");
+        			if(t == true){
+        				deleteAService(link,false);
+        			}
+        		});
+        		//审核服务
+        		$("#check_unchecked_service_" + i).on("click",function(){
+        			var r = $(this).attr("id").slice(24);
+        			var link = result[r].link;
+        			checkLinkAndModify(link,true);
+        		});
+	        }
+		}
+
+    	//判定字符串书否为ip格式
+    	function check_IP(reg_ip){  
+    		var ip = reg_ip;
+            var re=/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/;//正则表达式   
+            if(re.test(ip)){   
+                if(RegExp.$1<256 && RegExp.$2<256 && RegExp.$3<256 && RegExp.$4<256) 
+                    return true;   
+            }
+            return false;    
+        };
+
+        //添加服务列表
+        function addServiceList(result,num){
+        	$("#accordion").empty();
+        	var count = 0;
+    		var start = 10 * (num - 1);
+    		var end = start + 10;
+        	for(var i in result){
+        		if(count >= start && count < end){
+        			var state;
+	        		var img_url = "";
+	        		var remarks;
+	        		var provider_name;
+	        		var panel;
+	        		var state_color;
+                    var has_parameter;
+	        		if(result[i].isPass == true){
+	        			state = "审核通过";
+	        			panel = "panel-info";
+	        			state_color = "color:black";
+	        		}else{
+	        			state = "审核未通过";
+	        			panel = "panel-warning";
+	        			state_color = "color:red";
+	        		}
+	        		if(result[i].provider_name == null || result[i].provider_name == ""){
+	        			provider_name = "";
+	        		}else{
+	        			provider_name = result[i].provider_name;
+	        		}
+	        		if(result[i].remarks == null || result[i].remarks == ""){
+	        			remarks = "";
+	        		}else{
+	        			remarks = result[i].remarks;
+	        		}
+	        		if(result[i].img != null || result[i].img != ""){
+	        			img_url = "data:image/png;base64," + result[i].img;
+	        		}
+                    if(result[i].has_parameter == true){
+                        has_parameter = "是";
+                    }else{
+                        has_parameter = "否";
+                    }
+
+	        		if(result[i].isChecked == true){
+	        			$("#accordion").append('<div class="panel '+panel+'"><div class="panel-heading"><h4 class="panel-title"><a data-toggle="collapse" data-parent="#accordion" href="#collapseThree_'+i+'">'+result[i].link+'</a></h4></div><div id="collapseThree_'+i+'" class="panel-collapse collapse"><div class="panel-body"><div class="row clearfix"><div class="col-md-12 column"><form class="form-horizontal" role="form"><div class="form-group"><label class="col-sm-2 control-label">服务链接:</label><div class="col-sm-10"><p class="form-control-static">'+result[i].link+'</p></div></div><div class="form-group"><label class="col-sm-2 control-label">服务名称:</label><div class="col-sm-10"><p class="form-control-static">'+result[i].link_name+'</p></div></div><div class="form-group"><label class="col-sm-2 control-label">服务商:</label><div class="col-sm-10"><p class="form-control-static">'+provider_name+'</p></div></div><div class="form-group"><label class="col-sm-2 control-label">服务状态:</label><div class="col-sm-10"><p class="form-control-static" style="'+state_color+'">'+state+'</p></div></div><div class="form-group"><label class="col-sm-2 control-label">服务类型:</label><div class="col-sm-10"><p class="form-control-static">'+result[i].type+'</p></div></div><div class="form-group"><label class="col-sm-2 control-label">服务图标:</label><div class="col-sm-10"><img src="'+img_url+'" class="img-rounded" alt="该服务没有图标" width="36" height="36"></div></div><div class="form-group"><label class="col-sm-2 control-label">是否传参:</label><div class="col-sm-10"><p class="form-control-static">'+has_parameter+'</p></div><div class="form-group"><label class="col-sm-2 control-label">备注:</label><div class="col-sm-10"><p class="form-control-static">'+remarks+'</p></div></div><div class="form-group"><label class="col-sm-2 control-label">操作:</label><div class="col-sm-10"><button type="button" class="btn btn-primary btn-sm" id="modify_service_'+i+'">修改</button><button type="button" class="btn btn-danger btn-sm" id="delete_service_'+i+'">删除</button><button type="button" class="btn btn-warning btn-sm" id="check_service_'+i+'">重新审核</button><button type="button" class="btn btn-info btn-sm" id="show_service_follow_'+i+'">查看关注名单</button></div></div></form></div></div></div></div></div>');
+	        			
+	        		}
+
+	        		//为生成的按钮添加监听
+	        		//修改服务
+	        		$("#modify_service_" + i).on("click",function(){
+	        			$("#link_warning").empty();
+                        $("#myModalLabel_serivce").text("服务信息修改");
+	        			var r = $(this).attr("id").slice(15);
+
+	        			var link = result[r].link;
+	        			var link_name = result[r].link_name;
+	        			var provider_name = result[r].provider_name;
+	        			var type = result[r].type;
+	        			var img = "data:image/png;base64," + result[r].img;
+	        			var remarks = result[r].remarks;
+                        var has_parameter = result[r].has_parameter;
+
+	        			$("#inputLink").val(link);
+	        			$("#inputLink").attr("placeholder",link);
+	        			$("#inputLink_name").val(link_name);
+	        			$("#inputProvider_name").val(provider_name);
+	        			$("#inputType").val(type);
+	        			$("#inputImgShow").attr("src",img);
+                        if(has_parameter == true){
+                            $("input[name='parameter']").get(1).checked=true; 
+                            $("#show_parameter").removeAttr("disabled");
+                        }else{
+                            $("input[name='parameter']").get(0).checked=true; 
+                            $("#show_parameter").attr("disabled","disabled");
+                        }
+	        			$("#inputRemarks").val(remarks);
+
+	    				$("#modify_service").modal("show");
+	        		});
+	        		//删除服务
+	        		$("#delete_service_" + i).on("click",function(){
+	        			var r = $(this).attr("id").slice(15);
+
+	        			var link = result[r].link;
+	        			var t = confirm("你确定要删除吗？");
+	        			if(t == true){
+	        				deleteAService(link,true);
+	        			}
+	        		});
+	        		//审核服务
+	        		$("#check_service_" + i).on("click",function(){
+	        			var r = $(this).attr("id").slice(14);
+
+	        			var link = result[r].link;
+	        			checkLinkAndModify(link,false);
+	        		});
+	        		//关注名单
+	        		$("#show_service_follow_" + i).on("click",function(){
+	        			var r = $(this).attr("id").slice(20);
+
+	        			var link = result[r].link;
+	    				//头部修改
+	    				$("#myModalLabel_follow").text(link + "的关注列表");
+	    				$("#user_follow_link").text(link);
+	    				//内容修改
+	    				getServiceFollow(link);
+	    				//模态框展现
+	    				$("#user_follow_list").modal("show");
+	        		});
+        		}else if(count > end){
+    				break;
+    			}
+    			count++;
+        	}
+        };
+
+        //获取user_follow
+    	function getServiceFollow(link){
+    		$.ajax({
+    			url:server_url + "/getAServiceFollow",
+    			type:"post",
+                jsonp:"callback",
+                timeout:5000,
+    			data:{
+    				link:link,
+    			},
+    			dataType:"json",
+    			success:function(result,status,xhr){
+    				flashUserFollow(result);
+    			}
+    		}).fail(function(){
+                var illustrate = "获取一个服务的关注列表失败，服务链接为："+link;
+                addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"查询","安全日志");
+            });
+    	}
+
+    	//刷新user_follow模态框内容，user_follow_show为json集
+    	function flashUserFollow(user_follow_show){
+    		console.log(user_follow_show);
+    		$("#follow_list").empty();
+    		if(user_follow_show != "" && user_follow_show != null){
+    			var id = user_follow_show[0].id;
+    		    for(var i in user_follow_show){
+    			    var id = user_follow_show[i].id;
+    			    var service_remarks = user_follow_show[i].service_remarks;
+    			    if(service_remarks==null){
+    			    	service_remarks = "";
+    			    }
+    			    $("#follow_list").append("<tr><td>" +id+ "</td><td>" +service_remarks+ "</td><td><button type=\"button\" class=\"btn btn-danger btn-xs\" id=\"delete_follow_"+id+"\" >删除</button></td></tr>");
+    	            //addBtnEvent("delete_follow_"+link);
+    	            $("#delete_follow_" + id).on("click",function(){
+    	            	var id = $(this).attr("id").slice(14);
+	        			var link = $("#user_follow_link").text();
+	        			var r=confirm("你确定要删除吗？");
+		                if (r==true){
+	    				    $.ajax({
+	    				    	url:server_url + "/deleteAFollow",
+	    			            type:"post",
+                                jsonp:"callback",
+                                timeout:5000,
+	    			            data:{
+	    			            	id:id,
+	    			            	link:link,
+	    			            },
+	    			            success:function(result,status,xhr){
+	    			            	console.log(result);
+	    			        	    alert(result);
+	    			        	    $("#follow_list").empty();
+	    			        	    getServiceFollow($("#user_follow_link").text());
+	    		        	    },
+	    		        	    error: function (XMLHttpRequest, textStatus, errorThrown) {
+				                    alert("系统错误：" + XMLHttpRequest.status);
+				                } 
+	    				    }).done(function(result){
+                                    if(result == "success"){
+                                        var illustrate = "删除用户"+id+"的关注服务，删除的关注服务链接为："+link;
+                                        addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"删除","操作日志");
+                                    }
+                                }).fail(function(){
+                                    var illustrate = "删除用户"+id+"的关注服务失败，删除的关注服务链接为："+link;
+                                    addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"删除","安全日志");
+                                });
+		                }
+    	            });
+    		    }
+    		}
+    	}
+
+        //换页后的动作,只要有翻页必写
+    	function pageChange(page_current){
+    		var service = JSON.parse(window.sessionStorage.getItem("service"));
+    		addServiceList(service, page_current);
+    	}
+
+    	//检验id是否存在
+    	function checkId(id){
+    		console.log(id);
+    		$.ajax({
+    			url:server_url + "/checkId",
+    			type:"post",
+    			data:{
+    				id:id,
+    			},
+    			success:function(result,status,xhr){
+    				console.log(result);
+    				$("#id_warning").text(result);
+    				if(result == "该用户存在"){
+    					$("#id_warning").attr("style","color:green");
+    					$("#submit_new_follow").removeAttr("disabled");
+    				}else{
+    					$("#id_warning").attr("style","color:red");
+    					$("#submit_new_follow").attr("disabled","disabled");
+    				}
+    			},
+    		});
+    	}
+
+    	//检验link可否访问
+    	function checkLink(link){
+    		console.log(link);
+    		$.ajax({
+    			url:server_url + "/checkLink",
+    			type:"post",
+    			data:{
+    				link:link,
+    			},
+    			success:function(result,status,xhr){
+    				console.log(result);
+    				$("#link_warning").text(result);
+    				if(result.startsWith("链接可访问")){
+    					$("#link_warning").attr("style","color:green");
+    				}else{
+    					$("#link_warning").attr("style","color:red");
+    				}
+    			},
+    		});
+    	}
+
+    	//检验type是否为新
+    	function checkType(type){
+    		$.ajax({
+    			url:server_url + "/checkType",
+    			type:"post",
+    			data:{
+    				type:type,
+    			},
+    			success:function(result,status,xhr){
+    				console.log(result);
+    				$("#type_warning").text(result);
+    				if(result.startsWith("输入的服务类型为新类型")){
+    					$("#type_warning").attr("style","color:red");
+    				}else{
+    					$("#type_warning").attr("style","color:green");
+    				}
+    			},
+    		});
+    	}
+
+    	//检验link可否访问并刷新
+    	function checkLinkAndModify(link,click_check){
+    		console.log(link);
+    		$.ajax({
+    			url:server_url + "/checkLinkAndModify",
+    			type:"post",
+                jsonp:"callback",
+                timeout:5000,
+    			data:{
+    				link:link,
+    			},
+    			success:function(result,status,xhr){
+    				console.log(result);
+    				alert(result);
+    				//目前只有两处需要调用此方法：服务列表和待处理服务列表
+    				if(click_check == false){
+    					window.location.reload();
+    				}
+    				if(click_check == true){
+    					$("#accordion_for_service_to_check").empty();
+	    				$("#waiting_checked_service_show").click();
+    				}
+    			},
+    		}).fail(function(){
+                var illustrate = "重新审核服务操作失败，审核的服务链接为："+link;
+                addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"修改","安全日志");
+            });
+    	}
+
+    	//修改服务时显示图标
+    	function show_input_img(){
+			var str = "";
+    	    var obj = document.getElementById("inputImg");
+    	    if(obj.files.length == 0){
+    	    	return false;
+    	    }
+	        var file = obj.files[0];
+	    	//检验是否为图像文件  
+		    if(!/image\/\w+/.test(file.type)){  
+		        alert("看清楚，这个需要图片！");  
+		        $("#inputImg").val(null);
+		        return false;  
+		    }  
+		    var reader = new FileReader();  
+		    //将文件以Data URL形式读入页面  
+		    reader.readAsDataURL(file);  
+		    reader.onload=function(e){  
+		        $("#inputImgShow").attr("src",this.result);
+		    }  
+    	}
+
+    	//删除一个服务
+    	function deleteAService(link,whether_alert){
+    		$.ajax({
+    				url:server_url + "/deleteAService",
+    				type:"post",
+                    jsonp:"callback",
+                    timeout:5000,
+    				data:{
+    					link:link,
+    				},
+    				success:function(result,status,xhr){
+	    				console.log(result);
+	    				//目前只有两处需要调用此方法：服务列表和待处理服务列表
+	    				if(whether_alert == true){
+	    					alert(result);
+	    					window.location.reload();
+	    				}else{
+	    					alert(result);
+	    					$("#accordion_for_service_to_check").empty();
+	    					$("#waiting_checked_service_show").click();
+	    				}
+	    			},
+	    			error: function (XMLHttpRequest, textStatus, errorThrown) {
+	                    alert("删除失败：" + XMLHttpRequest.status);
+	                } 
+    			}).done(function(result){
+                    if(result == "success"){
+                        deleteParameterByLink(link);
+                        var illustrate = "删除了一个服务，该服务链接为："+link;
+                        addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"删除","操作日志");
+                    }
+                }).fail(function(){
+                    var illustrate = "删除一个服务失败，该服务链接为："+link;
+                    addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"删除","安全日志");
+                });
+    	}
+
+    	//新增一个服务
+    	function addAService(link,link_name,provider_name,type,img,remarks,has_parameter){
+    		$.ajax({
+    				url:server_url + "/addAService",
+    				type:"post",
+                    jsonp:"callback",
+                    timeout:5000,
+    				data:{
+    					link:link,
+    					link_name:link_name,
+    					provider_name:provider_name,
+    					type:type,
+    					img:img,
+    					remarks:remarks,
+                        has_parameter:has_parameter,
+    				},
+    				success:function(result,status,xhr){
+	    				console.log(result);
+	    				alert(result);
+	    				if(!result.startsWith("新增失败：存在相同链接！")){
+	    					window.location.href = "service_management.html";
+	    				}
+	    			},
+	    			error: function (XMLHttpRequest, textStatus, errorThrown) {
+	                    alert("新增服务失败：" + XMLHttpRequest.status);
+	                } 
+    			}).done(function(result){
+                    if(result == "success"){
+                        if($('input:radio[name="parameter"]:checked').val() == "y"){
+                            addParameters(link,JSON.parse(window.sessionStorage.getItem("parameter")));
+                            var par = [];
+                            window.sessionStorage.setItem("parameter",JSON.stringify(par));
+                        }
+                        var illustrate = "新增了一个服务，该服务链接为："+link;
+                        addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"新增","操作日志");
+                    }
+                }).fail(function(){
+                    var illustrate = "新增一个服务失败，该服务信息为：服务链接"+link+"服务名称："+link_name+"服务商："+provider_name+"服务类型："+type+"服务图标的base64码："+img+"服务备注："+remarks;
+                    addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"新增","安全日志");
+                });
+    	}
+
+    	//如果有待处理服务，则button字体变红
+    	function check_waiting_service(result){
+    		for(var i in result){
+    			if(result[i].isChecked == false){
+    				$("#waiting_checked_service_show").attr("style","color:red");
+    				break;
+    			}
+    		}
+    	}
+
+        function checkParameter(){
+            var val=$('input:radio[name="parameter"]:checked').val();
+            if(val==null){
+                alert("什么也没选中!");
+            }
+            else{
+                if(val == "n"){
+                    $("#show_parameter").attr("disabled","disabled");
+                }else if(val == "y"){
+                    $("#show_parameter").removeAttr("disabled");
+                }
+            }
+        }
+
+        //删除一个服务的所有参数
+        function deleteParameterByLink(link){
+            $.ajax({
+                url:server_url + "/deleteParameterByLink",
+                type:"post",
+                jsonp:"callback",
+                timeout:5000,
+                data:{
+                    link:link,
+                },
+                success:function(result,status,xhr){
+                    console.log(result);
+                }
+            }).fail(function(){
+                var illustrate = "删除服务时，其参数删除失败，服务链接："+link;
+                addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"删除","安全日志");
+            });
+        }
+
+        //获取一个服务的所有参数
+        function getParameterListByLink(link){
+            $.ajax({
+                url:server_url + "/getParameterListByLink",
+                type:"post",
+                jsonp:"callback",
+                timeout:5000,
+                async:false, 
+                data:{
+                    link:link,
+                },
+                success:function(result,status,xhr){
+                    var par = [];
+                    if(result != null){
+                        for(var i in result){
+                            par.push(result[i]);
+                        }
+                    }
+                    console.log(par);
+                    window.sessionStorage.setItem("parameter",JSON.stringify(par));
+                }
+            }).fail(function(){
+                var illustrate = "获取服务参数列表失败，服务链接：" + link;
+                addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"查询","安全日志");
+            });
+        }
+
+        //添加新参数
+        function addParameters(link,parameter_session){
+            console.log("0");
+            for(var i in parameter_session){
+                console.log("0" + parameter_session[i].parameter);
+                $.ajax({
+                    url:server_url + "/addAParameter",
+                    type:"post",
+                    jsonp:"callback",
+                    timeout:5000,
+                    data:{
+                        link:link,
+                        remarks:parameter_session[i].remarks,
+                        parameter:parameter_session[i].parameter,
+                    }
+                }).fail(function(){
+                    var illustrate = "添加服务参数失败：服务链接为：" + link + "服务参数为：" + parameter_session[i].parameter + "参数备注为" + parameter_session[i].remarks;
+                    addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"添加","安全日志");
+                });
+            }
+        }
+
+        //删除一个参数
+        function deleteAParameter(link,parameter){
+            $.ajax({
+                url:server_url + "/deleteAParameter",
+                type:"post",
+                jsonp:"callback",
+                timeout:5000,
+                data:{
+                    link:link,
+                    parameter:parameter,
+                },
+                success:function(result,status,xhr){
+                    console.log(result);
+                }
+            }).fail(function(){
+                var illustrate = "删除参数删除失败，服务链接："+link+"参数为："+parameter;
+                addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"删除","安全日志");
+            });
+        }
+
+        function addAParameter(link,parameter,remarks){
+            $.ajax({
+                url:server_url + "/addAParameter",
+                type:"post",
+                jsonp:"callback",
+                timeout:5000,
+                data:{
+                    link:link,
+                    parameter:parameter,
+                    remarks:remarks
+                },
+                success:function(result,status,xhr){
+                    console.log(result);
+                }
+            }).fail(function(){
+                var illustrate = "添加参数失败，服务链接："+link+"参数为："+parameter+"备注："+remarks;
+                addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"添加","安全日志");
+            });
+        }
+
+        //刷新参数列表
+        function refrashParameterList(parameter_session,type){
+            console.log(parameter_session);
+            $("#parameter_list").empty();
+            for(var i in parameter_session){
+                $("#parameter_list").append('<tr><td>'+parameter_session[i].parameter+'</td><td>'+parameter_session[i].remarks+'</td><td><button type="button" class="btn btn-danger btn-xs" style="margin:0px" id="delete_parameter_'+parameter_session[i].parameter+'">删除</button></td></tr>');
+
+                if(type == "添加服务"){
+                    $("#delete_parameter_"+parameter_session[i].parameter).on("click",function(){
+                        var parameter0 = $(this).attr("id").slice(17);
+                        var parameter_session = JSON.parse(sessionStorage.getItem("parameter"));
+                        for(var r in parameter_session){
+                            if(parameter_session[r].parameter == parameter0){
+                                if(parameter_session.length == 1){
+                                    parameter_session = [];
+                                    window.sessionStorage.setItem("parameter",JSON.stringify(parameter_session));
+                                }else{
+                                    parameter_session.splice(r,r);
+                                    window.sessionStorage.setItem("parameter",JSON.stringify(parameter_session));
+                                    break;
+                                }
+                            }
+                        }
+                        refrashParameterList(parameter_session,"添加服务");
+                    });
+                }else if(type == "服务信息修改"){
+                    $("#delete_parameter_"+parameter_session[i].parameter).on("click",{msg:$("#inputLink").attr("placeholder")},function(event){
+                        var parameter0 = $(this).attr("id").slice(17);
+                        var link = event.data.msg;
+                        console.log(link);
+                        deleteAParameter(link,parameter0);
+
+                        var parameter_session = JSON.parse(sessionStorage.getItem("parameter"));
+                        for(var r in parameter_session){
+                            if(parameter_session[r].parameter == parameter0){
+                                if(parameter_session.length == 1){
+                                    parameter_session = [];
+                                    window.sessionStorage.setItem("parameter",JSON.stringify(parameter_session));
+                                }else{
+                                    parameter_session.splice(r,r);
+                                    window.sessionStorage.setItem("parameter",JSON.stringify(parameter_session));
+                                    break;
+                                }
+                            }
+                        }
+                        refrashParameterList(parameter_session,"服务信息修改");
+                    });
+                }
+                
+            }
+        }
+    </script>
+</head>
+<body>
+<div class="container">
+	<div class="row clearfix">
+		<div class="col-md-12 column">
+			<div class="row clearfix">
+				<div class="col-md-8 column">
+					<div class="page-header">
+						<h1>
+							哈尔滨工业大学 <small>微信校园门户管理系统</small>
+						</h1>
+					</div>
+				</div>
+				<div class="col-md-4 column">
+					<a href="main.html">
+					<img alt="14x30" src="./img/HIT_logo.png" height="93" />
+					</a>
+				</div>
+			</div>
+			<ul class="nav nav-tabs nav-justified">
+				<li><a href="#" id="account_management">账户管理</a></li>
+	            <li class="active"><a href="#" id="service_management">服务管理</a></li>
+	            <li><a href="#" id="log_view">日志</a></li>
+	            <li><a href="#" id="access_statistics">数据统计</a></li>
+			</ul>
+		</div>
+		
+        <div class="row clearfix">
+
+		    <div class="col-md-12 column">
+				<h2 class="text-center">服务列表</h2>
+			</div>
+			<div class="row clearfix">
+				<div class="col-md-6 col-md-offset-3 column" id="front_socket_div">
+			    	<form class="form-inline text-center" role="form">
+		 	    			<div class="form-group">
+		                    	<label for="front_ip">前台ip:</label>
+			                    <input type="text" class="form-control" id="front_ip" placeholder="请输入ip">
+		                    </div>
+		                    <div class="form-group">
+		                    	<label for="front_port">前台端口:</label>
+			                    <input type="number" class="form-control" id="front_port" placeholder="请输入端口号" max="65535" min="1">
+		                    </div>
+		                    <button type="button" class="btn btn-default" id="modify_front_socket">修改链接</button>
+			    	</form>
+		    	</div>
+		    	<div class="col-md-3 column">
+			    	<form class="form-inline text-center" role="form">
+		                <button type="button" class="btn btn-primary" id="add_service">+</button>
+		                <button type="button" class="btn btn-info" id="waiting_checked_service_show">
+				            <span class="glyphicon glyphicon-bell"></span> 待处理申请
+				        </button>
+			    	</form>
+		    	</div>
+			</div>
+		    
+	    </div>
+	    <!--服务列表，内含默认服务格式-->
+		<div class="panel-group" id="accordion">
+			<!-- <div class="panel panel-info">
+				<div class="panel-heading">
+					<h4 class="panel-title">
+						<a data-toggle="collapse" data-parent="#accordion" 
+						   href="#collapseThree">
+							LINK
+						</a>
+					</h4>
+				</div>
+				<div id="collapseThree" class="panel-collapse collapse">
+					<div class="panel-body">
+						<div class="row clearfix">
+							<div class="col-md-12 column">
+								<form class="form-horizontal" role="form">
+									<div class="form-group">
+									    <label class="col-sm-2 control-label">服务链接</label>
+									    <div class="col-sm-10">
+									        <p class="form-control-static">link</p>
+									    </div>
+									</div>
+									<div class="form-group">
+									    <label class="col-sm-2 control-label">服务名称</label>
+									    <div class="col-sm-10">
+									        <p class="form-control-static">link_name</p>
+									    </div>
+									</div>
+									<div class="form-group">
+									    <label class="col-sm-2 control-label">服务商</label>
+									    <div class="col-sm-10">
+									        <p class="form-control-static">provider_name</p>
+									    </div>
+									</div>
+									<div class="form-group">
+									    <label class="col-sm-2 control-label">服务状态</label>
+									    <div class="col-sm-10">
+									        <p class="form-control-static">state</p>
+									    </div>
+									</div>
+									<div class="form-group">
+									    <label class="col-sm-2 control-label">服务类型</label>
+									    <div class="col-sm-10">
+									        <p class="form-control-static">type</p>
+									    </div>
+									</div>
+									<div class="form-group">
+									    <label class="col-sm-2 control-label">服务图标</label>
+									    <div class="col-sm-10">
+									        <img src="./img/15.png" class="img-rounded" width="36" height="36">
+									    </div>
+									</div>
+									<div class="form-group">
+									    <label class="col-sm-2 control-label">备注</label>
+									    <div class="col-sm-10">
+									        <p class="form-control-static">remarks按实际发贺卡上酒吧里发吉安市两大块has 阿斯兰的你拉开阿拉丁撒 爱丽丝看到基拉可能  阿肆多啦能力阿肆来看爱党阿肆开大哪里呢打的啊</p>
+									    </div>
+									</div>
+									<div class="form-group">
+										<label class="col-sm-2 control-label">操作：</label>
+									    <div class="col-sm-10">
+									        <button type="button" class="btn btn-primary" id="modify_service_">修改</button>
+									        <button type="button" class="btn btn-danger" id="delete_service_">删除</button>
+									        <button type="button" class="btn btn-danger" id="check_service_">重新审核</button>
+									    </div>
+									</div>
+								</form>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div> -->
+		</div>
+
+        <!-- 翻页 -->
+		<div class="col-md-12 text-center">
+			<div class="zxf_pagediv"></div>
+		</div>
+
+
+	</div>
+</div>
+
+<!--修改服务信息模态框-->
+<div class="modal fade" id="modify_service" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="myModalLabel_serivce">服务信息修改</h4>
+            </div>
+            <div class="modal-body">
+            	<form class="form-horizontal" role="form">
+				<div class="form-group">
+					 <label for="inputEmail3" class="col-sm-2 control-label">服务链接</label>
+					<div class="col-sm-10">
+						<input type="text" class="form-control" id="inputLink" onchange="checkLink(this.value)" />
+						<p id="link_warning"></p>
+					</div>
+				</div>
+				<div class="form-group">
+					 <label for="inputPassword3" class="col-sm-2 control-label">服务名称</label>
+					<div class="col-sm-10">
+						<input type="text" class="form-control" id="inputLink_name" />
+					</div>
+				</div>
+				<div class="form-group">
+					 <label for="inputPassword3" class="col-sm-2 control-label">服务商</label>
+					<div class="col-sm-10">
+						<input type="text" class="form-control" id="inputProvider_name" />
+					</div>
+				</div>
+				<div class="form-group">
+					 <label for="inputPassword3" class="col-sm-2 control-label">服务类型</label>
+					<div class="col-sm-10">
+						<input type="text" class="form-control" id="inputType" onchange="checkType(this.value)"/>
+						<p id="type_warning"></p>
+					</div>
+				</div>
+				<div class="form-group">
+					 <label for="inputPassword3" class="col-sm-2 control-label">服务图标</label>
+					<div class="col-sm-10">
+						<div class="col-sm-2">
+							<img id="inputImgShow" src="" alt="该服务没有图标" width="36" height="36">
+				 		</div>
+						<div class="col-sm-10">
+					 		<input type="file" class="form-control" id="inputImg" accept="image/*" onchange="show_input_img()" />请选择图片文件
+						</div>
+					</div>
+				</div>
+                <div class="form-group">
+                    <label for="inputPassword3" class="col-sm-2 control-label">是否传参</label>
+                    <label class="radio-inline" style="margin-left:7px ">
+                        <input type="radio" name="parameter" id="parameter_n" value="n" checked 
+                        onchange="checkParameter()">否
+                    </label>
+                    <label class="radio-inline">
+                        <input type="radio" name="parameter" id="parameter_y"  value="y" onchange="checkParameter()">是
+                    </label>
+                    <button type="button" class="btn btn-info btn-sm" id="show_parameter" style="margin-left:15px " disabled>参数设置</button>
+                </div>
+				<div class="form-group">
+					 <label for="inputPassword3" class="col-sm-2 control-label">备注</label>
+					<div class="col-sm-10">
+						<textarea class="form-control" style="margin-top: 5px" rows="3" id="inputRemarks"></textarea>
+					</div>
+				</div>
+			    </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal" id="close_modify_service">关闭</button>
+                <button type="button" class="btn btn-primary" id="service_modify_submit">提交更改</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal -->
+</div>
+
+<!-- 用户关注列表 -->
+<div class="modal fade" id="user_follow_list" tabindex="-1" role="dialog" aria-labelledby="myModalLabel_follow" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title" id="myModalLabel_follow">关注列表</h4><p hidden="true" id="user_follow_link"></p>
+            </div>
+            <div class="modal-body">
+            	<div class="row pre-scrollable">
+	            	<table class="table">
+						<thead>
+							<tr>
+								<th>
+									账户
+								</th>
+								<th>
+									状态
+								</th>
+								<th>
+									操作
+								</th>
+							</tr>
+						</thead>
+						<tbody id="follow_list">
+
+						</tbody>
+					</table>
+				</div>	
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="add_user_follow">添加新关注</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal -->
+</div>
+
+<!--添加新关注-->
+<div class="modal fade" id="add_follow_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">
+					&times;
+				</button>
+				<h4 class="modal-title" id="myModalLabel_addfollow">
+					请输入要添加的id
+				</h4>
+			</div>
+			<form role="form">
+				<div class="modal-body">
+		            <div class="form-group">
+		             	<input type="text" class="form-control" id="follow_id_to_add" placeholder="请输入id" onchange="checkId(this.value)">
+		             	<p id="id_warning"></p>
+		            </div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-primary" id="submit_new_follow" disabled="disabled">
+						提交
+					</button>
+				</div>
+			</form>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal -->
+</div>
+
+<!-- 待处理服务列表 -->
+<div class="modal fade" id="service_waiting_check" tabindex="-1" role="dialog" aria-labelledby="myModalLabel_follow" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title" id="myModalLabel_service_to_check">待处理服务列表</h4>
+            </div>
+            <div class="modal-body">
+            	<div class="row pre-scrollable">
+	            	<div class="panel-group" id="accordion_for_service_to_check">
+						
+	            	</div>
+				</div>	
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="finish_service_check">确定</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal -->
+</div>
+
+    <!-- 参数列表 -->
+<div class="modal fade" id="parameter_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="myModalLabel">
+                    参数列表
+                </h4>
+            </div>
+            <div class="modal-body">
+                <div class="row pre-scrollable">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>参数</th>
+                                <th>备注</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="parameter_list">
+
+                        </tbody>
+                    </table>
+                </div>  
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-info" id="addParameter">新参数</button>
+                <button type="button" class="btn btn-primary" data-dismiss="modal">
+                    确定
+                </button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal -->
+</div>
+
+
+<!-- 添加新参数 -->
+<div class="modal fade" id="add_parameter_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">
+                    &times;
+                </button>
+                <h4 class="modal-title" id="myModalLabel">
+                    添加参数
+                </h4>
+            </div>
+            <div class="modal-body">
+                <form class="form-horizontal" role="form">
+                    <div class="form-group">
+                        <label for="new_parameter" class="col-sm-2 control-label">参数名</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" id="new_parameter"
+                                placeholder="请输入参数名" onkeyup="value=value.replace(/[^\w\.\/]/ig,'')" max="15">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="new_remarks" class="col-sm-2 control-label">备注</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" id="new_remarks" 
+                                   placeholder="请输入备注">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" id="submitANewParameter">
+                    提交
+                </button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal -->
+</div>
+
+</body>
+</html>

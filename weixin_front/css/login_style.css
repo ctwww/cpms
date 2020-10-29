@@ -1,0 +1,32 @@
+@charset "UTF-8";
+/**
+ * 
+ * @authors ctw (you@example.org)
+ * @date    2019-04-10 19:04:11
+ * @version $Id$
+ */
+body{
+    background: url("../img/HIT_login0.png");
+    animation-name:login;
+    animation-duration:40s;
+    /*变换时间*/
+    animation-delay:5s;
+    /*动画开始时间*/
+    animation-iteration-count:infinite;
+    /*下一周期循环播放*/
+    animation-play-state:running;
+    /*动画开始运行*/
+}
+@keyframes login
+{
+    0%   {background:url("../img/HIT_login0.png");}
+    25%  {background:url("../img/HIT_login1.png");}
+    50%  {background:url("../img/HIT_login2.png");}
+    75%  {background:url("../img/HIT_login3.png");}
+    100% {background:url("../img/HIT_login0.png");}
+}
+.form{background: rgba(255,255,255,0.2);width:400px;margin:120px auto;}
+/*阴影*/
+.fa{display: inline-block;top: 27px;left: 6px;position: relative;color: #ccc;}
+input[type="text"],input[type="password"]{padding-left:26px;}
+.checkbox{padding-left:21px;}

@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<title>哈工大微信校园门户管理系统</title>
+    <script src="https://cdn.bootcss.com/jquery/2.2.4/jquery.min.js"></script>
+    <link href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <!-- 分页 -->
+	<link rel="stylesheet" type="text/css" href="css/zxf_page.css"/>
+	<script type="text/javascript" src="js/zxf_page.js"></script>
+
+	<!--导入后端地址-->
+    <script type="text/javascript" src="js/server.js"></script>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <style type="text/css">
+    	#account{
+    		margin-top:10px;
+    	}
+    	#show_method{
+    		background-color: #F0F8FF;
+    	}
+    </style>
+    <script>
+    	$(document).ready(function(){
+    		checklogin();
+    		$("#account_management").click(function(){
+    			window.location.href="account_management.html";
+    		});
+
+    		$("#service_management").click(function(){
+    			window.location.href="service_management.html";
+    		});
+
+    		$("#log_view").click(function(){
+    			window.location.href="log_view.html";
+    		});
+
+    		$("#access_statistics").click(function(){
+    			window.location.href="access_statistics.html";
+    		});
+
+            //提交账户修改or添加数据
+    		$("#user_modify_submit").click(function(){
+    			var path;
+    			if($("#user_modify_submit").text() == "提交"){
+    			    path = "/addAUser";
+    			}else{
+    				path = "/updateUser";
+    			}
+    			var id = $("#inputId").val();
+    			var password = $("#inputPassword").val();
+    			var wechat_id = $("#inputWechat_id").val();
+    			var username = $("#inputUsername").val();
+    			var isAdmin = $('input:radio[name="inputIsAdmin"]:checked').val();
+    			console.log(id);
+    			if(id == null || id == ""){
+    				alert("id不能为空");
+    			}else if(password == null || password == ""){
+    				alert("密码不能为空");
+    			}else if(isAdmin == null){
+    				alert("是否为管理员不能为空");
+    			}else{
+    				$.ajax({
+    					url:server_url + path,
+                        jsonp:"callback",
+                        timeout:5000,
+    					data:{
+    						id:id,
+    						password:password,
+    						wechat_id:wechat_id,
+    						username:username,
+    						isAdmin:isAdmin
+    					},
+    					type:"post",
+    					success:function(result,status,xhr){
+    						if(result == "success"){
+    							if($("#user_modify_submit").text() == "提交"){
+    				                $("#inputId").attr("readonly",true);
+    			                    $("#user_modify_submit").text("提交修改");
+    		                	}
+    							alert(result);
+    							window.location.href = "account_management.html";
+    						}else{
+    							alert(result);
+    						}
+    					},
+                        error:function(){
+                        }
+    				}).done(function(result){
+                        if(result == "success"){
+                            var illustrate;
+                            if(path == "/addAUser"){
+                                illustrate = "添加了新用户，用户id为："+id;
+                                addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"新增","操作日志");
+                            }else if(path == "/updateUser"){
+                                illustrate = "修改了"+id+"的用户信息";
+                                addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"修改","操作日志");
+                            }
+                        }
+                    }).fail(function(){
+                        var illustrate;
+                        var operation;
+                        if(path == "/addAUser"){
+                            var aboutisadmin;
+                            if(isAdmin == true){
+                                aboutisadmin = "是";
+                            }else{
+                                aboutisadmin = "否";
+                            }
+                            operation = "新增";
+                            illustrate = "添加新用户失败，用户id为："+id+"提交的数据：密码："+password+"微信号："+wechat_id+"用户名："+username+"是否为管理员："+aboutisadmin;
+                        }else if(path == "/updateUser"){
+                            operation = "修改";
+                            illustrate = "更新新用户信息失败，用户id为："+id;
+                        }
+                        addJournal(window.sessionStorage.getItem("admin_id"),illustrate,operation,"安全日志");
+                    });
+    			}
+    		});
+
+    		//添加新用户
+    		$("#addAUser").click(function(){
+    			$("#modify").modal("show");
+    			$("#inputId").attr("readonly",false);
+    			$("#inputId").val("");
+    			$("#inputPassword").val("");
+    			$("#inputWechat_id").val("");
+    			$("#inputUsername").val("");
+    			$("#inputIsAdmin_n").attr("checked","checked")
+    			$("#myModalLabel").text("添加账户");
+    			$("#user_modify_submit").text("提交");
+    		});
+
+    		//只看管理员
+    		$("#only_admin_list").click(function(){
+    			var user = JSON.parse(window.sessionStorage.getItem("user"));
+    			if($("#only_admin_list_li").attr("class") == "active"){
+    				$("#only_admin_list_li").attr("class","");
+    				window.sessionStorage.removeItem("user_show");
+    				window.sessionStorage.setItem("user_show",JSON.stringify(user));
+    				addUserList(user,1);
+    				addPage(calcutePageNum(user),1,0);
+    			}else{
+    				$("#only_admin_list_li").attr("class","active");
+    				var user_show = [];
+    				for(var i in user){
+    					if(user[i].isAdmin == true){
+    						user_show.push(user[i]);
+    					}
+    				}
+    				window.sessionStorage.removeItem("user_show");
+    				window.sessionStorage.setItem("user_show",JSON.stringify(user_show));
+    				addUserList(user_show,1);
+    				addPage(calcutePageNum(user_show),1,0);
+    			}
+    		});
+
+    		//用户查询（很粗糙）
+    		$("#search_user").click(function(){
+    			var data = $("#search_user_data").val();
+    			if(data == "" || data == null){
+    				window.location.reload();
+    			}else{
+    				var user = JSON.parse(window.sessionStorage.getItem("user_show"));
+	    			var user_show = [];
+	    			for(var i in user){
+	    				if(strSimilarity2Percent(user[i].id,data)>0.85){
+	    					user_show.push(user[i]);
+	    				}else if(strSimilarity2Percent(user[i].wechat_id,data)>0.85){
+	    					user_show.push(user[i]);
+	    				}else if(strSimilarity2Percent(user[i].username,data)>0.85){
+	    					user_show.push(user[i]);
+	    				}
+	    			}
+	    			console.log(data);
+	    			window.sessionStorage.removeItem("user_show");
+	    			window.sessionStorage.setItem("user_show",JSON.stringify(user_show));
+	    			addUserList(user_show,1);
+	    			addPage(calcutePageNum(user_show),1,0);
+    			}
+    		});
+
+    		//添加新关注
+    		$("#add_user_follow").click(function(){
+    			$("#follow_select").empty();
+    			//先获取全部的服务，再获取该用户关注的服务，得出可选择的列表
+    			$.ajax({
+    			    url:server_url + "/getServiceLinkList",
+    			    type:"get",
+    			    //contentType:"application/json; charset=UTF-8",
+    			    //dataType:"json",
+                    jsonp:"callback",
+                    timeout:5000,
+    			    success:function(result,status,xhr){
+    			    	console.log(result);
+    			    	var list = result;
+    			    	if(result != null && result != ""){
+    				    	$.ajax({
+    		                	url:server_url + "/getAUserFollow",
+    			                type:"post",
+                                jsonp:"callback",
+                                timeout:5000,
+    		                	data:{
+    			              	id:$("#user_follow_id").text(),
+    		                	},
+    		                	success:function(result,status,xhr){
+    		                		console.log(result);
+    		                		var follow_list = [];
+    		                		var flag = true;
+    		                		for(var i in list){
+    		                			for(var r in result){
+    		                				if(list[i].link == result[r].link){
+    		                					flag = false;
+    		                				}
+    		                			}
+    		                			if(flag == true){
+    		                				follow_list.push(list[i]);
+    		                			}
+    		                			flag = true;
+    		                		}
+    		                		console.log(follow_list);
+    		                		for(var i in follow_list){
+    		                			$("#follow_select").append("<option value=\""+follow_list[i].link+"\">"+follow_list[i].link+"</option>");
+    		                		}
+    			                }
+    		                }).fail(function(){
+                                        var illustrate = "获取账户"+$("#user_follow_id").text()+"关注的服务列表信息失败";
+                                        addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"查询","安全日志");
+                            });
+    				    }
+    			    }
+    		    }).fail(function(){
+                    var illustrate = "获取账户"+$("#user_follow_id").text()+"关注的服务列表信息失败";
+                    addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"查询","安全日志");
+                });
+    			$("#add_follow_modal").modal("show");
+    		});
+
+    		//提交新关注
+    		$("#submit_new_follow").click(function(){
+    			var id = $("#user_follow_id").text();
+    			var link = $("#follow_select").val();
+    		    $.ajax({
+    				url:server_url + "/addAUser_follow",
+    			    type:"post",
+                    jsonp:"callback",
+                    timeout:5000,
+    			    data:{
+    			        id:id,
+    			        link:link,
+    			    },
+    			    success:function(result,status,xhr){
+    			        console.log(result);
+    			        if(status == "success"){
+    			        	alert(result);
+    				    }else{
+    				        alert("系统错误");
+    				    }
+    				    getUserFollow($("#user_follow_id").text());
+    		        }
+    			}).done(function(){
+                    var illustrate = "为id为"+id+"的用户添加了新的服务关注，服务链接为："+link;
+                    addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"新增","操作日志");
+                }).fail(function(){
+                    var illustrate = "为id为"+id+"的用户添加新的服务关注失败，服务链接为："+link;
+                    addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"新增","安全日志");
+                });
+    			$("#add_follow_modal").modal("hide");
+    		});
+
+    		//获取账户列表：（session）user
+    		$.ajax({
+    			url:server_url + "/showUserList",
+    			type:"get",
+                jsonp:"callback",
+                timeout:5000,
+    			//contentType:"application/json; charset=UTF-8",
+    			//dataType:"json",
+    			success:function(result,status,xhr){
+    				console.log(result);
+    				window.sessionStorage.setItem("user",JSON.stringify(result));
+    				window.sessionStorage.setItem("user_show",JSON.stringify(result));
+    				if(status == "success" && result != null && result != ""){
+    					addUserList(result,1);
+    					addPage(calcutePageNum(result),1,1);
+    				}
+    			}
+    		}).fail(function(){
+                var illustrate = "获取账户列表信息失败";
+                addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"查询","安全日志");
+            });
+
+
+    	});
+
+    	//为动态生成的按钮添加点击事件
+    	function addBtnEvent(id){
+    		$(document.getElementById(id)).bind("click",function(){
+                var button_id = event.target.id;
+                //用户修改
+    			if(button_id.startsWith("modify_user_")){
+    				var account_id = button_id.slice(12);
+    				var account_password;
+    				var account_wechat_id;
+    				var account_username;
+    				var account_isAdmin;
+    				//显示模态框
+    				$("#inputId").attr("readonly",true);
+    				$("#myModalLabel").text("账户信息修改");
+    				$("#modify").modal("show");
+    				//获取session中user对象
+    				var user = JSON.parse(window.sessionStorage.getItem("user"));
+    				for(var i in user){
+    					if(user[i].id == account_id){
+    						account_password = user[i].password;
+    						account_wechat_id = user[i].wechat_id;
+    						account_username = user[i].username;
+    						account_isAdmin = user[i].isAdmin;
+    						break;
+    					}
+    				}
+    				//设定预值
+    				$("#inputId").val(account_id);
+    				$("#inputPassword").val(account_password);
+    				$("#inputWechat_id").val(account_wechat_id);
+    				$("#inputUsername").val(account_username);
+    				if(account_isAdmin == 0){
+    				    $("#inputIsAdmin_n").attr("checked","checked");
+    				}else{
+    					$("#inputIsAdmin_y").attr("checked","checked");
+    				}
+    			}
+    			//获取关注列表
+    			if(button_id.startsWith("detailed_information_")){
+    				var account_id = button_id.slice(21);
+    				console.log(account_id);
+    				//头部修改
+    				$("#myModalLabel_follow").text(account_id + "的关注列表");
+    				$("#user_follow_id").text(account_id);
+    				//内容修改
+    				getUserFollow(account_id);
+    				//模态框展现
+    				$("#user_follow_list").modal("show");
+    			}
+    			//删除用户
+    			if(button_id.startsWith("delete_user_")){
+    				var r=confirm("你确定要删除吗？");
+	                if (r==true){
+	                	var account_id = button_id.slice(12);
+    				    console.log(account_id);
+    				    $.ajax({
+    				    	url:server_url + "/deleteUserById",
+    			            type:"post",
+                            jsonp:"callback",
+                            timeout:5000,
+    			            data:{
+    			            	id:account_id,
+    			            },
+    			            success:function(result,status,xhr){
+    			            	console.log(result);
+    			        	    if(status == "success"){
+    			        	    	alert(result);
+    				            }else{
+    				        	    alert("系统错误");
+    				            }
+    				            window.location.href = "account_management.html";
+    		        	    }
+    				    }).done(function(result){
+                            if(success == "success"){
+                                var illustrate = "删除用户，用户id为："+id;
+                                addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"删除","操作日志");
+                            }
+                        }).fail(function(){
+                            var illustrate = "删除用户失败，用户id为："+id;
+                            addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"删除","安全日志");
+                        });
+	                }
+    			}
+    			//删除用户关注服务
+    			if(button_id.startsWith("delete_follow_")){
+    				var r=confirm("你确定要删除吗？");
+	                if (r==true){
+	                	var link = button_id.slice(14);
+    				    console.log(link+","+$("#user_follow_id").text());
+    				    $.ajax({
+    				    	url:server_url + "/deleteAFollow",
+    			            type:"post",
+                            jsonp:"callback",
+                            timeout:5000,
+    			            data:{
+    			            	id:$("#user_follow_id").text(),
+    			            	link:link,
+    			            },
+    			            //processData: false,
+    			            success:function(result,status,xhr){
+    			            	console.log(result);
+    			        	    if(status == "success"){
+    			        	    	alert(result);
+    				            }else{
+    				        	    alert("系统错误");
+    				            }
+    				            getUserFollow($("#user_follow_id").text());
+    		        	    }
+    				    }).done(function(result){
+                            if(result == "success"){
+                                var illustrate = "删除用户"+id+"的关注服务，删除的关注服务链接为："+link;
+                                addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"删除","操作日志");
+                            }
+                        }).fail(function(){
+                            var illustrate = "删除用户"+id+"的关注服务失败，删除的关注服务链接为："+link;
+                            addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"删除","安全日志");
+                        });
+	                }
+    			}
+            });
+    	}
+
+    	//获取user_follow
+    	function getUserFollow(id){
+    		$.ajax({
+    			url:server_url + "/getAUserFollow",
+    			type:"post",
+                jsonp:"callback",
+                timeout:5000,
+    			data:{
+    				id:id,
+    			},
+    			dataType:"json",
+    			success:function(result,status,xhr){
+    				//刷新模态框
+    				//flashUserFollow(result);
+    				flashUserFollow(result);
+    			}
+    		}).fail(function(){
+                    var illustrate = "获取账户"+id+"关注的服务列表信息失败";
+                    addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"查询","安全日志");
+            });
+    	}
+
+    	//刷新user_follow模态框内容，user_follow_show为json集
+    	function flashUserFollow(user_follow_show){
+    		console.log(user_follow_show);
+    		$("#follow_list").empty();
+    		if(user_follow_show != "" && user_follow_show != null){
+    			var id = user_follow_show[0].id;
+    		    for(var i in user_follow_show){
+    			    var link = user_follow_show[i].link;
+    			    var service_remarks = user_follow_show[i].service_remarks;
+    			    if(service_remarks==null){
+    			    	service_remarks = "";
+    			    }
+    			    $("#follow_list").append("<tr><td>" +link+ "</td><td>" +service_remarks+ "</td><td><button type=\"button\" class=\"btn btn-danger btn-xs\" id=\"delete_follow_"+link+"\" >删除</button></td></tr>");
+    	            addBtnEvent("delete_follow_"+link);
+    		    }
+    		}
+    	}
+
+    	//添加账户列表:num显示第几页,result为user的json数据集,num为当前页
+    	function addUserList(result,num){
+    		$("#user_list").empty();
+    		var count = 0;
+    		var start = 10 * (num - 1);
+    		var end = start + 10;
+    		for(var i in result){
+    			if(count >= start && count < end){
+    				var id = result[i].id;
+    			    var password = result[i].password;
+    			    var isAdmin = result[i].isAdmin;
+    			    var isAdmin_show;
+    			    if("wechat_id" in result[i]){
+    				    var wechat_id = result[i].wechat_id;
+    			    }else{
+    				    var wechat_id = "";
+    		    	}
+    			    if("username" in result[i]){
+    			    	var username = result[i].username;
+    			    }else{
+    				    var username = "";
+    			    }
+    			    if(isAdmin == true){
+    				    isAdmin_show = "是";
+    			    }else{
+    				    isAdmin_show = "否";
+    			    }
+    			    //组件id均为:()_+id
+    			    $("#user_list").append("<tr><td id=\"id_\"+id>" +id+ "</td><td id=\"password_\"+id>" +password+ "</td><td id=\"wechat_id_\"+id>" +wechat_id+ "</td><td id=\"username_\"+id>" +username+ "</td><td id=\"isAdmin_\"+id>" +isAdmin_show+ "</td><td><button type=\"button\" class=\"btn btn-default btn-xs\" id=\"modify_user_"+id+"\">修改</button><button type=\"button\" class=\"btn btn-info btn-xs\" id=\"detailed_information_"+id+"\">关注列表</button><button type=\"button\" class=\"btn btn-danger btn-xs\" id=\"delete_user_"+id+"\">删除</button></td></tr>");
+    			    addBtnEvent("modify_user_"+id);
+    			    addBtnEvent("detailed_information_"+id);
+    			    addBtnEvent("delete_user_"+id);
+    			}else if(count > end){
+    				break;
+    			}
+    			count++;
+    		}
+    	}
+
+    	//换页后的动作,只要有翻页必写
+    	function pageChange(page_current){
+    		var user = JSON.parse(window.sessionStorage.getItem("user_show"));
+    		addUserList(user, page_current);
+    	}
+
+    	//两个字符串的相似程度，并返回相差字符个数
+		function strSimilarity2Number(s, t){
+			var n = s.length, m = t.length, d=[];
+			var i, j, s_i, t_j, cost;
+			if (n == 0) return m;
+			if (m == 0) return n;
+			for (i = 0; i <= n; i++) {
+				d[i]=[];
+				d[i][0] = i;
+			}
+			for(j = 0; j <= m; j++) {
+				d[0][j] = j;
+			}
+			for (i = 1; i <= n; i++) {
+				s_i = s.charAt (i - 1);
+				for (j = 1; j <= m; j++) {
+					t_j = t.charAt (j - 1);
+					if (s_i == t_j) {
+						cost = 0;
+					}else{
+						cost = 1;
+					}
+				d[i][j] = Minimum (d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1] + cost);
+				}
+			}
+			return d[n][m];
+		}
+		//两个字符串的相似程度，并返回相似度百分比
+		function strSimilarity2Percent(s, t){
+			if(s==null||s==""||t==null||t==""){
+				return 0;
+			}
+			var l = s.length > t.length ? s.length : t.length;
+			var d = strSimilarity2Number(s, t);
+			return (1-d/l).toFixed(4);
+		}
+		function Minimum(a,b,c){
+			return a<b?(a<c?a:c):(b<c?b:c);
+		}
+    </script>
+</head>
+
+<body>
+<div class="container">
+	<div class="row clearfix">
+		<div class="col-md-12 column">
+			<div class="row clearfix">
+				<div class="col-md-8 column">
+					<div class="page-header">
+						<h1>
+							哈尔滨工业大学 <small>微信校园门户管理系统</small>
+						</h1>
+
+					</div>
+				</div>
+				<div class="col-md-4 column">
+					<a href="main.html">
+					<img alt="14x30" src="./img/HIT_logo.png" height="93" />
+					</a>
+				</div>
+			</div>
+			<ul class="nav nav-tabs nav-justified">
+				<li class="active"><a href="#" id="account_management">账户管理</a></li>
+	            <li><a href="#" id="service_management">服务管理</a></li>
+	            <li><a href="#" id="log_view">日志</a></li>
+	            <li><a href="#" id="access_statistics">数据统计</a></li>
+			</ul>
+		</div>
+		<div class="col-md-12 column">
+			<h2 class="text-center">账户列表</h2>
+		</div>
+		<div class="col-md-12 column" id="account">
+			<div class="col-md-8 column" id="show_method">
+				<ul class="nav nav-pills">
+				<li id="only_admin_list_li">
+					 <a id="only_admin_list" href="#">只看管理员</a>
+				</li>
+			    </ul>
+			</div>
+			<div class="col-md-3.5 column">
+				<form class="navbar-form navbar-left" role="search">
+                    <div class="form-group">
+                        <input type="text" class="form-control" placeholder="搜索账户" id="search_user_data">
+                    </div>
+                    <button type="button" class="btn btn-default" id="search_user">提交</button>
+                </form>
+			</div>
+			<div class="col-md-0.5 column">
+                    <button type="button" class="btn btn-primary navbar-btn" id="addAUser">+</button>
+			</div>
+			<!--账户列表-->
+			<table class="table">
+				<thead>
+					<tr>
+						<th>
+							id
+						</th>
+						<th>
+							密码
+						</th>
+						<th>
+							微信id
+						</th>
+						<th>
+							用户名
+						</th>
+						<th>
+							是否为管理员
+						</th>
+						<th>
+							操作
+						</th>
+					</tr>
+				</thead>
+				<tbody id="user_list">
+					
+				</tbody>
+			</table>
+			<!-- 翻页 -->
+			<div class="col-md-12 text-center">
+			    <div class="zxf_pagediv"></div>
+			</div>
+		</div>
+	</div>
+	
+</div>
+
+<!--修改和增加账户信息模态框 -->
+<div class="modal fade" id="modify" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title" id="myModalLabel">账户信息修改</h4>
+            </div>
+            <div class="modal-body">
+            	<form class="form-horizontal" role="form">
+				<div class="form-group">
+					 <label for="inputEmail3" class="col-sm-2 control-label">id</label>
+					<div class="col-sm-10">
+						<input type="text" class="form-control" id="inputId" readonly />
+					</div>
+				</div>
+				<div class="form-group">
+					 <label for="inputPassword3" class="col-sm-2 control-label">密码</label>
+					<div class="col-sm-10">
+						<input type="text" class="form-control" id="inputPassword" />
+					</div>
+				</div>
+				<div class="form-group">
+					 <label for="inputPassword3" class="col-sm-2 control-label">微信id</label>
+					<div class="col-sm-10">
+						<input type="text" class="form-control" id="inputWechat_id" />
+					</div>
+				</div>
+				<div class="form-group">
+					 <label for="inputPassword3" class="col-sm-2 control-label">用户名</label>
+					<div class="col-sm-10">
+						<input type="text" class="form-control" id="inputUsername" />
+					</div>
+				</div>
+				<div class="form-group">
+					 <label for="inputPassword3" class="col-sm-2 control-label">是否为管理员</label>
+					<div class="col-sm-10">
+						<label class="radio-inline">
+                        <input type="radio" name="inputIsAdmin" value="1" id="inputIsAdmin_y">是
+                        </label>
+                        <label class="radio-inline">
+                        <input type="radio" name="inputIsAdmin"  value="0" id="inputIsAdmin_n">否
+                        </label>
+					</div>
+				</div>
+			    </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" id="user_modify_submit">提交更改</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal -->
+</div>
+
+<!-- 用户关注列表 -->
+<div class="modal fade" id="user_follow_list" tabindex="-1" role="dialog" aria-labelledby="myModalLabel_follow" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title" id="myModalLabel_follow">关注列表</h4><p hidden="true" id="user_follow_id"></p>
+            </div>
+            <div class="modal-body">
+                <div class="row pre-scrollable">
+                	<table class="table">
+        				<thead>
+        					<tr>
+        						<th>
+        							服务
+        						</th>
+        						<th>
+        							状态
+        						</th>
+        						<th>
+        							操作
+        						</th>
+        					</tr>
+        				</thead>
+        				<tbody id="follow_list">
+        					
+        				</tbody>
+        			</table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="add_user_follow">添加新关注</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal -->
+</div>
+
+<!--添加新关注-->
+<div class="modal fade" id="add_follow_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">
+					&times;
+				</button>
+				<h4 class="modal-title" id="myModalLabel">
+					请选择要添加的服务关注
+				</h4>
+			</div>
+			<form role="form">
+			<div class="modal-body">
+	            <div class="form-group">
+	             	<select class="form-control" id="follow_select">
+		            </select>
+	            </div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-primary" id="submit_new_follow">
+					提交
+				</button>
+			</div>
+		</form>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal -->
+</div>
+</body>
+</html>

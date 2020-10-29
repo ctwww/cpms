@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<title>哈工大微信校园门户管理系统</title>
+    <script src="https://cdn.bootcss.com/jquery/2.2.4/jquery.min.js"></script>
+    <link href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="js/server.js"></script>
+    <script type="text/javascript" src="js/echarts.min.js"></script>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <style type="text/css">
+
+    </style>
+    <script>
+    	$(document).ready(function(){
+    		checklogin();
+    		$("#account_management").click(function(){
+    			window.location.href="account_management.html";
+    		});
+
+    		$("#service_management").click(function(){
+    			window.location.href="service_management.html";
+    		});
+
+    		$("#log_view").click(function(){
+    			window.location.href="log_view.html";
+    		});
+
+    		$("#access_statistics").click(function(){
+    			window.location.href="access_statistics.html";
+    		});
+
+    		//展示内容框改变时，统计图随之变化
+    		$("#select_service_num_type").change(function(){
+    			set_cylindrical_graph($("#select_service_num_type").val());
+    			//alert($("#select_service_num_type").val());
+    		});
+    		$("#select_service_proportion_type").change(function(){
+    			set_pie_chart($("#select_service_proportion_type").val());
+    		});
+    		$("#select_service_trend_type").change(function(){
+    			set_broken_line_diagram($("#select_service_trend_type").val());
+    		});
+    		// 基于准备好的dom，初始化echarts实例
+	        var myChart1 = echarts.init(document.getElementById('main1'));
+	        var myChart2 = echarts.init(document.getElementById('main2'));
+	        var myChart3 = echarts.init(document.getElementById('main3'));
+    		//获取服务列表：（session）service
+    		$.ajax({
+    			url:server_url + "/showServiceList",
+    			type:"get",
+                jsonp:"callback",
+                timeout:5000,
+                async:false,
+    			success:function(result,status,xhr){
+    				window.sessionStorage.setItem("service",JSON.stringify(result));
+    			}
+    		}).fail(function(){
+                var illustrate = "获取服务信息列表失败";
+                addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"查询","安全日志");
+            });
+
+
+    		$.ajax({
+    			url:server_url + "/showAccessList",
+				type:"get",
+				jsonp:"callback",
+                timeout:5000,
+				success:function(result,status,xhr){
+					window.sessionStorage.setItem("access",JSON.stringify(result));
+					// 初始化柱形图
+		    		set_cylindrical_graph("1周");
+		    		// 初始化饼状图
+		    		set_pie_chart("1周");
+		    		// 初始化折线图
+		    		set_broken_line_diagram("1周");
+				},
+    			error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    alert("统计信息无法加载！错误：" + XMLHttpRequest.status);
+                } 
+    		}).fail(function(){
+                var illustrate = "获取统计列表信息失败";
+                addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"查询","安全日志");
+            });
+
+    		
+    	});
+
+    	//柱形图
+    	function set_cylindrical_graph(type){
+    		var service = JSON.parse(window.sessionStorage.getItem("service"));
+    		var access = JSON.parse(window.sessionStorage.getItem("access"));
+			var date = getNowFormatDate(); 
+
+			var year = date.substring(0,4);
+			var month = date.substring(5,7);
+			var day = date.substring(8,10);
+
+			var max = 0;
+			console.log(year+"-"+month+"-"+day);
+    		var json = [];
+    		var j = {};
+    		var sum = 0;
+    		if(type == "1周"){
+    			max = 7;
+    		}
+    		if(type == "1月"){
+    			if(month != 1){
+    				max = daysBetween(date,(year+"-"+(month-1)+"-"+day));
+    			}else{
+    				max = daysBetween(date,((year-1)+"-12-"+day));
+    			}
+    		}
+    		if(type == "1年"){
+    			max = daysBetween(date,((year-1)+"-"+month+"-"+day));
+    		}
+    		if(type == "3年"){
+    			max = daysBetween(date,((year-3)+"-"+month+"-"+day));
+    		}
+    		if(type == "5年"){
+    			max = daysBetween(date,((year-5)+"-"+month+"-"+day));
+    		}
+			for(var i in service){
+    			if(service[i].link_name == null || service[i].link_name == ""){
+    				j.link_name = service[i].link;
+    			}else{
+    				j.link_name = service[i].link_name;
+    			}
+    			sum = 0;
+    			for(var r in access){
+    				if(daysBetween(access[r].date,date)<max){
+    					if(access[r].link == service[i].link){
+    						sum = sum + access[r].sum;
+    					}
+    				}
+    			}
+    			j.sum = sum;
+    			json.push(j);
+    			j = {};
+    		}
+    		console.log(json);
+    		
+    		var myChart = echarts.getInstanceByDom($("#main1")[0]);
+	        // 指定图表的配置项和数据
+	        var option = {
+	            /*title: {
+	                text: 'ECharts 入门示例'
+	            },*/
+	            tooltip: {},
+	            legend: {
+	                data:['访问量']
+	            },
+	            gird:{
+	            	left:'50%',
+	            	right:'50%',
+	            },
+	            xAxis: {
+	                data: (function(){
+	                	var data = [];
+	                	for(var i in json){
+	                		data.push(json[i].link_name);
+	                	}
+	                	return data;
+	                })()
+	            },
+	            yAxis: {},
+	            series: [{
+	                name: '访问量',
+	                type: 'bar',
+	                data: (function(){
+	                	var data = [];
+	                	for(var i in json){
+	                		data.push(json[i].sum);
+	                	}
+	                	return data;
+	                })()
+	            }]
+	        };
+	        // 使用刚指定的配置项和数据显示图表。
+	        myChart.setOption(option);
+    	};
+
+    	//圆饼图
+		function set_pie_chart(type){
+			var service = JSON.parse(window.sessionStorage.getItem("service"));
+    		var access = JSON.parse(window.sessionStorage.getItem("access"));
+			var date = getNowFormatDate(); 
+
+			var year = date.substring(0,4);
+			var month = date.substring(5,7);
+			var day = date.substring(8,10);
+
+			var max = 0;
+			console.log(year+"-"+month+"-"+day);
+    		var json = [];
+    		var j = {};
+    		var sum = 0;
+    		if(type == "1周"){
+    			max = 7;
+    		}
+    		if(type == "1月"){
+    			if(month != 1){
+    				max = daysBetween(date,(year+"-"+(month-1)+"-"+day));
+    			}else{
+    				max = daysBetween(date,((year-1)+"-12-"+day));
+    			}
+    		}
+    		if(type == "1年"){
+    			max = daysBetween(date,((year-1)+"-"+month+"-"+day));
+    		}
+    		if(type == "3年"){
+    			max = daysBetween(date,((year-3)+"-"+month+"-"+day));
+    		}
+    		if(type == "5年"){
+    			max = daysBetween(date,((year-5)+"-"+month+"-"+day));
+    		}
+    		console.log(max);
+    		for(var i in service){
+    			if(service[i].link_name == null || service[i].link_name == ""){
+    				j.link_name = service[i].link;
+    			}else{
+    				j.link_name = service[i].link_name;
+    			}
+    			sum = 0;
+    			for(var r in access){
+    				if(daysBetween(access[r].date,date)<max){
+    					if(access[r].link == service[i].link){
+    						sum = sum + access[r].sum;
+    					}
+    				}
+    			}
+    			j.sum = sum;
+    			json.push(j);
+    			j = {};
+    		}
+    		console.log(json);
+
+    		var myChart = echarts.getInstanceByDom($("#main2")[0]);
+	        // 指定图表的配置项和数据
+	        var option = {
+	            /*title : {
+		        text: '同名数量统计',
+		        subtext: '纯属虚构',
+		        x:'center'
+		    },*/
+		    tooltip : {
+		        trigger: 'item',
+		        formatter: "{a} <br/>{b} : {c} ({d}%)"
+		    },
+		    legend: {
+		        type: 'scroll',
+		        orient: 'vertical',
+		        right: 170,
+		        top: 50,
+		        data: (function(){
+	                	var data = [];
+	                	for(var i in json){
+	                		data.push(json[i].link_name);
+	                	}
+	                	console.log(data);
+	                	return data;
+	                })()
+		        //selected: data.selected
+		    },
+		    series : [
+		        {
+		            name: '服务名称',
+		            type: 'pie',
+		            radius : '60%',
+		            center: ['30%', '40%'],
+		            data: (function(){
+	                	var data = [];
+	                	var d = {};
+	                	for(var i in json){
+	                		d.name = json[i].link_name;
+	                		d.value = json[i].sum;
+	                		data.push(d);
+	                		d = {};
+	                	}
+	                	return data;
+	                })(),
+		            itemStyle: {
+		                emphasis: {
+		                    shadowBlur: 10,
+		                    shadowOffsetX: 0,
+		                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+		                }
+		            }
+		        }
+		    ]
+	        };
+	        // 使用刚指定的配置项和数据显示图表。
+	        myChart.setOption(option);
+		};
+
+		//折线图
+    	function set_broken_line_diagram(type){
+    		var service = JSON.parse(window.sessionStorage.getItem("service"));
+    		var access = JSON.parse(window.sessionStorage.getItem("access"));
+			var date = getNowFormatDate(); //今天
+
+			var year = date.substring(0,4);
+			var month = date.substring(5,7);
+			var day = date.substring(8,10);
+
+			var max = 0;
+			console.log(year+"-"+month+"-"+day);
+    		var json = [];
+    		var j = {};
+    		var sum = 0;
+    		if(type == "1周"){
+    			max = 7;
+    		}
+    		if(type == "1月"){
+    			if(month != 1){
+    				max = daysBetween(date,(year+"-"+(month-1)+"-"+day));
+    			}else{
+    				max = daysBetween(date,((year-1)+"-12-"+day));
+    			}
+    		}
+    		if(type == "1年"){
+    			max = daysBetween(date,((year-1)+"-"+month+"-"+day));
+    		}
+    		if(type == "3年"){
+    			max = daysBetween(date,((year-3)+"-"+month+"-"+day));
+    		}
+    		if(type == "5年"){
+    			max = daysBetween(date,((year-5)+"-"+month+"-"+day));
+    		}
+    		console.log(max);
+
+    		for(var r in access){
+				if(daysBetween(access[r].date,date)<max){
+					for(var i in service){
+						if(access[r].link == service[i].link){
+							if(service[i].link_name == null || service[i].link_name == ""){
+		    					j.link_name = service[i].link;
+			    			}else{
+			    				j.link_name = service[i].link_name;
+			    			}
+			    			j.sum = access[r].sum;
+				    		j.date = access[r].date;
+				    		json.push(j);
+				    		j = {};
+				    		break;
+						}
+		    		}
+				}
+			}
+    		
+    		console.log(json);
+
+    		var myChart = echarts.getInstanceByDom($("#main3")[0]);
+	        // 指定图表的配置项和数据
+	        var option = {
+			    tooltip: {
+			        trigger: 'axis'
+			    },
+			    legend: {
+			        data:(function(){
+			        	var data = [];
+			        	for(var i in service){
+			        		data.push(service[i].link_name);
+			        	}
+			        	console.log(data);
+			        	return data;
+			        })()//change ok！
+			    },
+			    grid: {
+			        left: '3%',
+			        right: '4%',
+			        bottom: '3%',
+			        containLabel: true
+			    },
+			    toolbox: {
+			        feature: {
+			            saveAsImage: {}
+			        }
+			    },
+			    xAxis: {
+			        type: 'time',
+			        boundaryGap: false,
+			       // data: ['周一','周二','周三','周四','周五','周六','周日']//change
+			    },
+			    yAxis: {
+			        type: 'value'
+			    },
+			    //change
+			    series:(function(){
+			    	var data = [];
+			    	var d0 = {};
+			    	for(var i in service){
+			    		if(service[i].link_name != null && service[i].link_name != ""){
+			    			d0.name = service[i].link_name;
+			    		}else{
+			    			d0.name = service[i].link;
+			    		}
+			    		d0.type = 'line';
+			    		//d0.stack = "总量";
+			    		d0.smooth = true;
+			    		d0.data = [];
+			    		var d0_data = [];
+			    		for(var r in json){
+			    			if(json[r].link_name == d0.name){
+			    				d0_data.push(json[r].date);
+			    				d0_data.push(json[r].sum);
+			    				d0.data.push(d0_data);
+			    				d0_data = [];
+			    			}
+			    		}
+			    		data.push(d0);
+			    		d0 = {};
+			    	}
+			    	console.log(data);
+			    	return data;
+			    })(),
+			    
+	        };
+	        // 使用刚指定的配置项和数据显示图表。
+	        myChart.setOption(option);
+    	};
+
+
+		//获取当前时间，格式YYYY-MM-DD
+	    function getNowFormatDate() {
+	        var date = new Date();
+	        var seperator1 = "-";
+	        var year = date.getFullYear();
+	        var month = date.getMonth() + 1;
+	        var strDate = date.getDate();
+	        if (month >= 1 && month <= 9) {
+	            month = "0" + month;
+	        }
+	        if (strDate >= 0 && strDate <= 9) {
+	            strDate = "0" + strDate;
+	        }
+	        var currentdate = year + seperator1 + month + seperator1 + strDate;
+	        return currentdate;
+	    };
+
+	    //求两个时间的天数差 日期格式为 YYYY-MM-dd   
+		function daysBetween(DateOne,DateTwo){   
+		    var OneMonth = DateOne.substring(5,DateOne.lastIndexOf ('-'));  
+		    var OneDay = DateOne.substring(DateOne.length,DateOne.lastIndexOf ('-')+1);  
+		    var OneYear = DateOne.substring(0,DateOne.indexOf ('-'));  
+		  
+		    var TwoMonth = DateTwo.substring(5,DateTwo.lastIndexOf ('-'));  
+		    var TwoDay = DateTwo.substring(DateTwo.length,DateTwo.lastIndexOf ('-')+1);  
+		    var TwoYear = DateTwo.substring(0,DateTwo.indexOf ('-'));  
+		  
+		    var cha=((Date.parse(OneMonth+'/'+OneDay+'/'+OneYear)- Date.parse(TwoMonth+'/'+TwoDay+'/'+TwoYear))/86400000);   
+		    return Math.abs(cha);  
+		}  
+
+
+    </script>
+</head>
+<body data-spy="scroll" data-target="#myScrollspy">
+    <div class="container">
+	<div class="row clearfix">
+		<div class="col-md-12 column">
+			<div class="row clearfix">
+				<div class="col-md-8 column">
+					<div class="page-header">
+						<h1>
+							哈尔滨工业大学 <small>微信校园门户管理系统</small>
+						</h1>
+					</div>
+				</div>
+				<div class="col-md-4 column">
+					<a href="main.html">
+					<img alt="14x30" src="./img/HIT_logo.png" height="93" />
+					</a>
+				</div>
+			</div>
+			<ul class="nav nav-tabs nav-justified">
+				<li><a href="#" id="account_management">账户管理</a></li>
+	            <li><a href="#" id="service_management">服务管理</a></li>
+	            <li><a href="#" id="log_view">日志</a></li>
+	            <li class="active"><a href="#" id="access_statistics">数据统计</a></li>
+			</ul>
+		</div>
+		<div class="col-md-2 column" id="myScrollspy">
+			<P></P>
+			<ul class="nav nav-pills nav-stacked" data-spy="affix" data-offset-top="125">
+			  <li class="active"><a href="#chart1">服务访问量数值</a></li>
+			  <li><a href="#chart2">服务访问量比重</a></li>
+			  <li><a href="#chart3">服务访问量走势</a></li>
+			</ul>
+		</div>
+		<div class="col-md-10 column text-center">
+			<form class="form-inline" role="form">
+			    <div class="form-group">
+			    	<label>
+			    		<h2 id="chart1">服务访问量数值</h2>
+			    	</label>
+	    			<label for="name"><small>显示最近</small></label>
+				    <select class="form-control" id="select_service_num_type">
+				        <option>1周</option>
+				        <option>1月</option>
+				        <option>1年</option>
+				        <option>3年</option>
+				        <option>5年</option>
+				    </select>
+				    <label for="name"><small>的访问量</small></label>
+			    </div>
+			</form>
+			<div id="main1" style="width: 900px;height:600px;margin-top:10px"></div>
+			<hr>
+			<form class="form-inline" role="form">
+			    <div class="form-group">
+			    	<label>
+			    		<h2 id="chart2">服务访问量比重</h2>
+			    	</label>
+	    			<label for="name"><small>显示最近</small></label>
+				    <select class="form-control" id="select_service_proportion_type">
+				        <option>1周</option>
+				        <option>1月</option>
+				        <option>1年</option>
+				        <option>3年</option>
+				        <option>5年</option>
+				    </select>
+				    <label for="name"><small>的比重</small></label>
+			    </div>
+			</form>
+			<div id="main2" style="width: 900px;height:600px;margin-top:10px"></div>
+			<hr>
+			<form class="form-inline" role="form">
+			    <div class="form-group">
+			    	<label>
+			    		<h2 id="chart3">服务访问量走势</h2>
+			    	</label>
+	    			<label for="name"><small>显示最近</small></label>
+				    <select class="form-control" id="select_service_trend_type">
+				        <option>1周</option>
+				        <option>1月</option>
+				        <option>1年</option>
+				        <option>3年</option>
+				        <option>5年</option>
+				    </select>
+				    <label for="name"><small>的走势</small></label>
+			    </div>
+			</form>
+			<div id="main3" style="width: 810px;height:540px;margin-top:10px"></div>
+		</div>
+	</div>
+</div>
+</body>
+</html>

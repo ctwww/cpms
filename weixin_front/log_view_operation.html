@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<title>哈工大微信校园门户管理系统</title>
+    <script src="https://cdn.bootcss.com/jquery/2.2.4/jquery.min.js"></script>
+    <link href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="js/server.js"></script>
+	<!--dataTables-->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.19/js/dataTables.bootstrap.min.js"></script>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <style type="text/css">
+    	td.details-control {
+		    background: url('./img/details_open.png') no-repeat center center;
+		    cursor: pointer;
+		    background-size: 80%,80%;
+		    width: 5px;
+            height: 5px;
+		}
+		tr.shown td.details-control {
+		    background: url('./img/details_close.png') no-repeat center center;
+		    background-size: 80%,80%;
+		    width: 5px;
+            height: 5px;
+		},
+    </style>
+    <script>
+    	$(document).ready(function(){
+    		checklogin();
+    		$("#account_management").click(function(){
+    			window.location.href="account_management.html";
+    		});
+
+    		$("#service_management").click(function(){
+    			window.location.href="service_management.html";
+    		});
+
+    		$("#log_view").click(function(){
+    			window.location.href="log_view.html";
+    		});
+
+    		$("#access_statistics").click(function(){
+    			window.location.href="access_statistics.html";
+    		});
+
+    		$("#all_logs").click(function(){
+    			window.location.href="log_view.html";
+    		});
+
+    		$("#security_logs").click(function(){
+    			window.location.href="log_view_security.html";
+    		});
+
+    		$("#user_logs").click(function(){
+    			window.location.href="log_view_user.html";
+    		});
+
+    		$("#function_logs").click(function(){
+    			window.location.href="log_view_function.html";
+    		});
+
+    		$("#operation_logs").click(function(){
+    			window.location.href="log_view_operation.html";
+    		});
+
+    		$.ajax({
+				url:server_url + "/showOperationJournalList",
+				type:"get",
+				jsonp:"callback",
+                timeout:5000,
+				success:function(result,status,xhr){
+					window.sessionStorage.setItem("log",JSON.stringify(result));
+					addLogList(result);
+				},
+			}).fail(function(){
+                var illustrate = "获取日志列表信息失败";
+                addJournal(window.sessionStorage.getItem("admin_id"),illustrate,"查询","安全日志");
+            });
+
+    	});
+
+    	function format ( d ) {
+    		console.log(d.id);
+    		var id = d.id;
+    		var date = d.date;
+    		var log = JSON.parse(window.sessionStorage.getItem("log"));
+    		console.log(log);
+    		for(var i in log){
+    			if((log[i].id == id && log[i].date == date)||(log[i].id == "00000" && id == "系统后台" && log[i].date == date)||(log[i].id == "00001" && id == "非注册用户" && log[i].date == date)){
+    				var illustrate = log[i].illustrate;
+        			return '<table border="0" style="padding-left:50px;">'+
+				        '<dl>'+
+				            '<dd style="word-wrap:break-word;word-break:break-all;"<p style="padding:8px;" class="form-control-static">'+illustrate+'</p></dd>'+
+				        '</dl>'+
+			    		'</table>';
+    			}
+    		}
+		};
+    	function addLogList(result){
+    		var list = result;
+        	for(var i in list){
+				if(list[i].illustrate == null){
+					list[i].illustrate = "";
+				}
+				if(list[i].id == "00000"){
+					list[i].id = "系统后台";
+				}
+				if(list[i].id == "00001"){
+					list[i].id = "非注册用户";
+				}
+        	}
+        	console.log(list);
+        	//$("#myTable1").dataTable().fnDestroy();
+        	var table =$("#myTable1").DataTable( {
+				"aoColumnDefs": [
+					{"bSortable": false, "aTargets": [ 0 ] }
+				],
+				data: list,
+				//bRetrieve: true,
+		        //使用对象数组，一定要配置columns，告诉 DataTables 每列对应的属性
+		        //data 这里是固定不变的，name，position，salary，office 为你数据里对应的属性
+		        columns: [
+		            {
+		                "class":          'details-control',
+		                "orderable":      false,
+		                "data":           null,
+		                "defaultContent": ''
+		            },
+		            { data: 'id' },
+		            { data: 'date' },
+		            { data: 'operation' },
+		            { data: 'type' },
+		        ],
+				//"aaSorting": [[1, 'asc']],//排序
+				"aLengthMenu": [
+					[5,10, 15, 20, -1],
+					['5', '10', '15', '20', "所有"] // change per page values here
+				],
+				"iDisplayLength": 10,
+				"oLanguage": {
+					"oAria":{
+						"sSortAscending": " - click/return to sort ascending",
+						"sSortDescending": " - click/return to sort descending"
+					},
+					"sLengthMenu": "每页显示 _MENU_ 条记录", 
+					"sZeroRecords": "对不起，查询不到任何相关数据", 
+					"sEmptyTable":"未有相关数据",
+					"sLoadingRecords":"正在加载数据-请等待...",
+					"sInfo": "当前显示 _START_ 到 _END_ 条，共 _TOTAL_ 条记录。", 
+					"sInfoEmpty": "当前显示0到0条，共0条记录", 
+					"sInfoFiltered": "（数据库中共为 _MAX_ 条记录）", 
+					"sProcessing": "<img src='${pageContext.request.contextPath }/image/loading.gif'/> 正在加载数据...", 
+					"sSearch": "模糊查询：", 
+					"sUrl": "", //多语言配置文件，可将oLanguage的设置放在一个txt文件中，例：Javascript/datatable/dtCH.txt 
+					"oPaginate": { 
+						"sFirst": "第一页", 
+						"sPrevious": " 上一页 ", 
+						"sNext": " 下一页 ", 
+						"sLast": " 最后一页 "
+					} 
+				}, //多语言配置 
+				// set the initial value
+			});
+
+			$('#myTable1 tbody').on('click', 'td.details-control', function () {
+		        var tr = $(this).closest('tr');
+		        var row = table.row( tr );
+		        console.log(row.data());
+		        if ( row.child.isShown() ) {
+		            // This row is already open - close it
+		            row.child.hide();
+		            tr.removeClass('shown');
+		        }
+		        else {
+		            // Open this row
+		            row.child( format(row.data()) ).show();
+		            tr.addClass('shown');
+		        }
+		  	});
+    	}
+    </script>
+</head>
+<body>
+    <div class="container">
+	<div class="row clearfix">
+		<div class="col-md-12 column">
+			<div class="row clearfix">
+				<div class="col-md-8 column">
+					<div class="page-header">
+						<h1>
+							哈尔滨工业大学 <small>微信校园门户管理系统</small>
+						</h1>
+					</div>
+				</div>
+				<div class="col-md-4 column">
+					<a href="main.html">
+					<img alt="14x30" src="./img/HIT_logo.png" height="93" />
+					</a>
+				</div>
+			</div>
+			<ul class="nav nav-tabs nav-justified">
+				<li><a href="#" id="account_management">账户管理</a></li>
+	            <li><a href="#" id="service_management">服务管理</a></li>
+	            <li class="active"><a href="#" id="log_view">日志</a></li>
+	            <li><a href="#" id="access_statistics">数据统计</a></li>
+			</ul>
+		</div>
+		<div class="col-md-2 column">
+			<P></P>
+			<ul class="nav nav-pills nav-stacked">
+			  <li><a href="#" id="all_logs">全部</a></li>
+			  <li><a href="#" id="user_logs">用户日志</a></li>
+			  <li class="active"><a href="#" id="operation_logs">操作日志</a></li>
+			  <li><a href="#" id="function_logs">运行日志</a></li>
+			  <li><a href="#" id="security_logs">安全日志</a></li>
+			</ul>
+		</div>
+
+		<div class="col-md-10 column">
+			<div class="col-md-12 column">
+				<h2 class="text-center">日志列表</h2>
+			</div>
+			<table class="table" id="myTable1">
+				<thead>
+					<tr>
+						<th>
+						</th>
+						<th>
+							id
+						</th>
+						<th>
+							时间
+						</th>
+						<th>
+							操作类型
+						</th>
+						<th>
+							日志类型
+						</th>
+					</tr>
+				</thead>
+				<tbody id="log_list">
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
+</body>
+</html>

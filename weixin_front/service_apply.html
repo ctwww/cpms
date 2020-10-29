@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<title>新服务申请</title>
+	<script src="https://cdn.bootcss.com/jquery/2.2.4/jquery.min.js"></script>
+    <link href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="js/server.js"></script>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <style type="text/css">
+        button{margin:10px;}
+        label{margin-top:5px;}
+    </style>
+
+    <script type="text/javascript">
+    	$(document).ready(function(){
+			var parameter_session = [];
+			console.log(parameter_session);
+			window.sessionStorage.setItem("parameter",JSON.stringify(parameter_session));
+
+    		$("#submit_service_apply").click(function(){
+
+    			var link = $("#inputLink").val();
+    			var link_name = $("#inputLink_name").val();
+    			var provider_name = $("#inputProvider_name").val();
+    			var type = $("#inputType").val();
+    			var img_src = $("#inputImgShow").attr("src");
+    			var img = $("#inputImgShow").attr("src").substring(img_src.indexOf(",") + 1);
+    			var remarks = $("#inputRemarks").val();
+
+    			var has_parameter_beforechange = $('input:radio[name="parameter"]:checked').val();
+                var has_parameter;
+                if(has_parameter_beforechange == "n"){
+                    has_parameter = false;
+                }else if(has_parameter_beforechange == "y"){
+                    has_parameter = true;
+                }
+
+    			if(link == null || link == ""){
+    				alert("服务链接不能为空！");
+    				return;
+    			}
+    			if(type == null || type == ""){
+    				alert("服务类型不能为空！");
+    				return;
+    			}
+    			$.ajax({
+    				url:server_url + "/addAService",
+    				type:"post",
+    				jsonp:"callback",
+                    timeout:5000,
+    				data:{
+    					link:link,
+    					link_name:link_name,
+    					provider_name:provider_name,
+    					type:type,
+    					img:img,
+    					remarks:remarks,
+    					has_parameter:has_parameter,
+    					isChecked:false,
+    				},
+    				success:function(result,status,xhr){
+	    				console.log(result);
+	    				if(result.startsWith("success")){
+	    					alert("请求成功");
+	    					window.location.href = "service_apply_success.html";
+	    				}else if(result.startsWith("新增失败：存在相同链接")){
+	    					alert("请求失败：存在相同链接");
+	    				}else{
+	    					alert(result);
+	    				}
+	    			},
+	    			error: function (XMLHttpRequest, textStatus, errorThrown) {
+	                    alert("请求失败：" + XMLHttpRequest.status);
+	                } 
+    			}).done(function(result){
+    				if(result.startsWith("success")){
+    					applyAddParameters();
+    					var illustrate = "新增了服务申请，链接为："+link;
+    					addJournal("00001",illustrate,"新增","用户日志");
+    				}
+    			}).fail(function(){
+    				var illustrate = "新增服务申请失败，服务信息为：服务链接"+link+"服务名称："+link_name+"服务商："+provider_name+"服务类型："+type+"服务图标base64码："+img;
+    				addJournal("00001",illustrate,"新增","安全日志");
+    			});
+    		});
+
+    		//显示参数列表
+    		$("#show_parameter").click(function(){
+    			refrashParameterList(JSON.parse(sessionStorage.getItem("parameter")));
+    			$('#parameter_modal').modal('show');
+    		});
+
+    		//参数列表添加新参数模态框
+    		$("#addParameter").click(function(){
+    			$("#new_parameter").val("");
+    			$("#new_remarks").val("");
+    			$('#add_parameter_modal').modal('show');
+    		});
+
+    		//添加新参数
+    		$("#submitANewParameter").click(function(){
+    			var parameter_to_send = $("#new_parameter").val();
+    			var remarks_to_send = $("#new_remarks").val();
+    			var flag = true;
+				var parameter_session = JSON.parse(sessionStorage.getItem("parameter"));
+				var para = {};
+				for(var i in parameter_session){
+					if(parameter_session[i].parameter == parameter_to_send){
+						flag = false;
+					}
+				}
+    			if(parameter_to_send != null && flag == true){
+    				para.parameter = parameter_to_send;
+    				para.remarks = remarks_to_send;
+    				parameter_session.push(para);
+    				console.log(parameter_session);
+    				window.sessionStorage.setItem("parameter",JSON.stringify(parameter_session));
+    				refrashParameterList(JSON.parse(sessionStorage.getItem("parameter")));
+    				$('#add_parameter_modal').modal('hide');
+    			}
+
+    			if(flag == false){
+    				alert("该参数已经存在！")
+    			}
+    			
+    		});
+    	});
+    	//检验link可否访问;
+    	function checkLink(link){
+    		console.log(link);
+    		$.ajax({
+    			url:server_url + "/checkLink",
+    			type:"post",
+    			data:{
+    				link:link,
+    			},
+    			success:function(result,status,xhr){
+    				console.log(result);
+    				$("#link_warning").text(result);
+    				if(result.startsWith("链接可访问")){
+    					$("#link_warning").attr("style","color:green");
+    				}else{
+    					$("#link_warning").attr("style","color:red");
+    				}
+    			},
+    		});
+    	}
+
+    	//检验type是否为新
+    	function checkType(type){
+    		$.ajax({
+    			url:server_url + "/checkType",
+    			type:"post",
+    			data:{
+    				type:type,
+    			},
+    			success:function(result,status,xhr){
+    				console.log(result);
+    				$("#type_warning").text(result);
+    				if(result.startsWith("输入的服务类型为新类型")){
+    					$("#type_warning").attr("style","color:red");
+    				}else{
+    					$("#type_warning").attr("style","color:green");
+    				}
+    			},
+    		});
+    	}
+
+    	//修改服务时显示图标
+    	function show_input_img(){
+			var str = "";
+    	    var obj = document.getElementById("inputImg");
+    	    if(obj.files.length == 0){
+    	    	return false;
+    	    }
+	        var file = obj.files[0];
+	    	//检验是否为图像文件  
+		    if(!/image\/\w+/.test(file.type)){  
+		        alert("看清楚，这个需要图片！");  
+		        $("#inputImg").val(null);
+		        return false;  
+		    }  
+		    var reader = new FileReader();  
+		    //将文件以Data URL形式读入页面  
+		    reader.readAsDataURL(file);  
+		    reader.onload=function(e){  
+		        $("#inputImgShow").attr("src",this.result);
+		    }  
+    	}
+
+
+    	function checkParameter(){
+
+            var val=$('input:radio[name="parameter"]:checked').val();
+            if(val==null){
+                alert("什么也没选中!");
+            }
+            else{
+                if(val == "n"){
+                    $("#show_parameter").attr("disabled","disabled");
+                }else if(val == "y"){
+                    $("#show_parameter").removeAttr("disabled");
+                }
+            }
+        }
+
+        //刷新参数列表
+        function refrashParameterList(parameter_session){
+        	console.log(parameter_session);
+			$("#parameter_list").empty();
+			for(var i in parameter_session){
+				$("#parameter_list").append('<tr><td>'+parameter_session[i].parameter+'</td><td>'+parameter_session[i].remarks+'</td><td><button type="button" class="btn btn-danger btn-xs" style="margin:0px" id="delete_parameter_'+parameter_session[i].parameter+'">删除</button></td></tr>');
+				$("#delete_parameter_"+parameter_session[i].parameter).on("click",function(){
+					var parameter0 = $(this).attr("id").slice(17);
+					var parameter_session = JSON.parse(sessionStorage.getItem("parameter"));
+					for(var r in parameter_session){
+						if(parameter_session[r].parameter == parameter0){
+							if(parameter_session.length == 1){
+								parameter_session = [];
+								window.sessionStorage.setItem("parameter",JSON.stringify(parameter_session));
+							}else{
+								parameter_session.splice(r,r);
+								window.sessionStorage.setItem("parameter",JSON.stringify(parameter_session));
+								break;
+							}
+						}
+					}
+					refrashParameterList(parameter_session);
+				});
+			}
+        }
+
+        //添加参数到数据库
+        function applyAddParameters(){
+        	var link = $("#inputLink").val();
+        	var parameter_session = JSON.parse(sessionStorage.getItem("parameter"));
+        	if(parameter_session.length != 0){
+        		for(var i in parameter_session){
+        			$.ajax({
+        				url:server_url + "/addAParameter",
+	    				type:"post",
+	    				jsonp:"callback",
+	                    timeout:5000,
+	    				data:{
+	    					link:link,
+	    					parameter:parameter_session[i].parameter,
+	    					remarks:parameter_session[i].remarks,
+	    				},
+	    				success:function(result,status,xhr){
+	    					console.log(result);
+		    			}
+        			}).fail(function(){
+	    				var illustrate = "新增服务申请,添加参数失败，参数信息为：服务链接："+link+"参数："+parameter_session[i].parameter+"备注："+parameter_session[i].remarks;
+	    				addJournal("00001",illustrate,"新增","安全日志");
+	    			});
+        		}
+        	}
+        }
+
+    </script>
+</head>
+<body>
+	<div class="container">
+		<div class="row clearfix">
+			<div class="col-md-12 column">
+				<div class="row clearfix">
+					<div class="col-md-8 column">
+						<div class="page-header">
+							<h1>
+								哈尔滨工业大学 <small>微信校园门户服务申请</small>
+							</h1>
+						</div>
+					</div>
+					<div class="col-md-4 column">
+						<img alt="14x30" src="./img/HIT_logo.png" height="93" />
+					</div>
+				</div>
+			</div>
+
+			<div class="col-md-12 column">
+				<form role="form">
+					<div class="form-group">
+					 	<label for="inputEmail3" class="col-sm-2 control-label">服务链接：</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control" id="inputLink" onchange="checkLink(this.value)" />
+							<p id="link_warning"></p>
+						</div>
+					</div>
+					<div class="form-group">
+						 <label for="inputPassword3" class="col-sm-2 control-label">服务名称：</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control" id="inputLink_name" />
+							<p id="link_name_warning"></p>
+						</div>
+					</div>
+					<div class="form-group">
+						 <label for="inputPassword3" class="col-sm-2 control-label">服务商：</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control" id="inputProvider_name" />
+							<p id="provider_name_warning"></p>
+						</div>
+					</div>
+					<div class="form-group">
+						 <label for="inputPassword3" class="col-sm-2 control-label">服务类型：</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control" id="inputType" onchange="checkType(this.value)"/>
+							<p id="type_warning"></p>
+						</div>
+					</div>
+					<div class="form-group">
+						 <label for="inputPassword3" class="col-sm-2 control-label">服务图标：</label>
+						<div class="col-sm-10">
+							<div class="col-sm-2">
+								<img id="inputImgShow" src="" alt="未设置图标" width="36" height="36">
+					 		</div>
+							<div class="col-sm-10">
+						 		<input type="file" class="form-control" id="inputImg" accept="image/*" onchange="show_input_img()" />请选择图片文件
+							</div>
+						</div>
+					</div>
+					<div class="form-group">
+	                    <label for="inputPassword3" class="col-sm-2 control-label">是否传参</label>
+	                    <label class="radio-inline" style="margin-left:7px ">
+	                        <input type="radio" name="parameter" id="parameter_n" value="n" checked 
+	                        onchange="checkParameter()">否
+	                    </label>
+	                    <label class="radio-inline" >
+	                        <input type="radio" name="parameter" id="parameter_y"  value="y" onchange="checkParameter()">是
+	                    </label>
+	                    <button type="button" class="btn btn-info btn-sm" id="show_parameter" style="margin-left:15px " disabled>参数设置</button>
+	                </div>
+					<div class="form-group">
+						 <label for="inputPassword3" class="col-sm-2 control-label">备注：</label>
+						<div class="col-sm-10">
+							<textarea class="form-control" rows="3" id="inputRemarks"></textarea>
+							<p id="remarks_warning"></p>
+						</div>
+					</div> 
+					<div class="text-center">
+						<button type="button" class="btn btn-primary" id="submit_service_apply">提交</button>
+					</div>
+				</form>
+			</div>
+
+		</div>
+	</div>
+
+	<!-- 参数列表 -->
+<div class="modal fade" id="parameter_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h4 class="modal-title" id="myModalLabel">
+					参数列表
+				</h4>
+			</div>
+			<div class="modal-body">
+				<div class="row pre-scrollable">
+	            	<table class="table">
+						<thead>
+							<tr>
+								<th>参数</th>
+						        <th>备注</th>
+						        <th>操作</th>
+							</tr>
+						</thead>
+						<tbody id="parameter_list">
+
+						</tbody>
+					</table>
+				</div>	
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-info" id="addParameter">新参数</button>
+				<button type="button" class="btn btn-primary" data-dismiss="modal">
+					确定
+				</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal -->
+</div>
+
+	<!-- 添加新参数 -->
+<div class="modal fade" id="add_parameter_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">
+					&times;
+				</button>
+				<h4 class="modal-title" id="myModalLabel">
+					添加参数
+				</h4>
+			</div>
+			<div class="modal-body">
+				<form class="form-horizontal" role="form">
+					<div class="form-group">
+						<label for="new_parameter" class="col-sm-2 control-label">参数名</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control" id="new_parameter"
+								placeholder="请输入参数名" onkeyup="value=value.replace(/[^\w\.\/]/ig,'')" max="15">
+						</div>
+					</div>
+					<div class="form-group">
+						<label for="new_remarks" class="col-sm-2 control-label">备注</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control" id="new_remarks" 
+								   placeholder="请输入备注">
+						</div>
+					</div>
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+				<button type="button" class="btn btn-primary" id="submitANewParameter">
+					提交
+				</button>
+			</div>
+		</div><!-- /.modal-content -->
+	</div><!-- /.modal -->
+</div>
+
+</body>
+</html>

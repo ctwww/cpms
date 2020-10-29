@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<title>哈工大微信校园门户管理系统</title>
+    <script src="https://cdn.bootcss.com/jquery/2.2.4/jquery.min.js"></script>
+    <link href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="js/server.js"></script>
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <style type="text/css">
+    	.form-control{
+		    box-shadow: none;
+		}
+    </style>
+    <script>
+    	$(document).ready(function(){
+    		$("#tosee").hide();
+
+    		//在server.js中方法
+    		checklogin();
+
+    		$("#user_follow_management").click(function(){
+    			window.location.href="user_follow_management.html";
+    		});
+
+    		$("#user_service_management").click(function(){
+    			window.location.href="user_service_management.html";
+    		});
+
+    		$("#userself_information_management").click(function(){
+    			window.location.href="userself_information_management.html";
+    		});
+
+    		//获取用户信息
+    		$.ajax({
+    			url:server_url + "/getAUser",
+    			type:"get",
+                jsonp:"callback",
+                timeout:5000,
+    			data:{
+    				id:window.sessionStorage["user_id"],
+    			},
+    			success:function(result,status,xhr){
+    				window.sessionStorage.setItem("user",JSON.stringify(result));
+    				if(result == "用户信息无法查询!"){
+    					alert(result);
+    				}else{
+    					console.log(result);
+    					completeUser(result);
+    				}
+    			},
+    			error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    alert("用户信息无法加载！错误：" + XMLHttpRequest.status);
+                } 
+    		}).fail(function(){
+                var illustrate = "获取个人信息失败";
+                addJournal(window.sessionStorage.getItem("user_id"),illustrate,"查询","安全日志");
+            });
+
+    		$("#userself_wechat_id_modify").click(function(){
+    			$("#myModalLabel").text("请输入要绑定的微信号");
+    			$("#wechat_id_and_username").modal("show");
+    		});
+
+    		$("#userself_username_modify").click(function(){
+    			$("#myModalLabel").text("请输入要绑定的用户名");
+    			$("#wechat_id_and_username").modal("show");
+    		});
+
+    		$("#userself_password_modify").click(function(){
+    			$("#password_modal").modal("show");
+    		});
+
+    		$("#submit_modify").click(function(){
+    			var id = $("#userself_id").val();
+    			var password = $("#userself_password").val();
+    			if($("#myModalLabel").text() == "请输入要绑定的微信号")
+    			{
+    				var wechat_id = $("#new_value").val();
+    				var username = $("#userself_username").val();
+    			}else{
+    				var wechat_id = $("#userself_wechat_id").val();
+    				var username = $("#new_value").val();
+    			}
+    			
+    			$.ajax({
+    					url:server_url + "/updateUser",
+                        jsonp:"callback",
+                        timeout:5000,
+    					data:{
+    						id:id,
+    						password:password,
+    						wechat_id:wechat_id,
+    						username:username,
+    						isAdmin:false,
+    					},
+    					type:"post",
+    					success:function(result,status,xhr){
+    						if(result == "success"){
+    							alert(result);
+    							window.location.reload();
+    						}else{
+    							alert(result);
+    						}
+    					}
+    				}).done(function(result){
+                        if(result == "success"){
+                            var illustrate = "修改个人微信号、用户名操作成功：微信号："+wechat_id+"用户名："+username;
+                            addJournal(window.sessionStorage.getItem("user_id"),illustrate,"修改","用户日志");
+                        }
+                    }).fail(function(){
+                        var illustrate = "修改个人微信号、用户名失败：微信号："+wechat_id+"用户名："+username;
+                        addJournal(window.sessionStorage.getItem("user_id"),illustrate,"修改","安全日志");
+                    });
+    		});
+
+    		$("#submit_password_modify").click(function(){
+    			var id = $("#userself_id").val();
+    			var password = $("#new_password0").val();
+    			var wechat_id = $("#userself_wechat_id").val();
+    			var username = $("#userself_username").val();
+    			$.ajax({
+    					url:server_url + "/updateUser",
+                        jsonp:"callback",
+                        timeout:5000,
+    					data:{
+    						id:id,
+    						password:password,
+    						wechat_id:wechat_id,
+    						username:username,
+    						isAdmin:false,
+    					},
+    					type:"post",
+    					success:function(result,status,xhr){
+    						if(result == "success"){
+    							alert(result);
+    							window.location.reload();
+    						}else{
+    							alert(result);
+    						}
+    					}
+    				}).done(function(result){
+                        if(result == "success"){
+                            var illustrate = "修改个人密码操作成功，密码修改为："+password;
+                            addJournal(window.sessionStorage.getItem("user_id"),illustrate,"修改","用户日志");
+                        }
+                    }).fail(function(){
+                        var illustrate = "修改个人密码操作失败，密码欲修改为："+password;
+                        addJournal(window.sessionStorage.getItem("user_id"),illustrate,"修改","安全日志");
+                    });
+    		});
+
+    	});
+
+    	function completeUser(result){
+    		$("#userself_id").val("");
+    		$("#userself_password").val("");
+    		$("#userself_wechat_id").val("");
+    		$("#userself_username").val("");
+    		$("#userself_id").val(result[0].id);
+    		$("#userself_password").val(result[0].password);
+    		$("#userself_wechat_id").val(result[0].wechat_id);
+    		$("#userself_username").val(result[0].username);
+    	};
+
+    	//检验password是否一致
+    	function checkPassword(password){
+    		var check_password = $("#new_password0").val();
+    		if(check_password == password){
+    			$("#password_warning").text("两次输入一致");
+    			$("#password_warning").attr("style","color:green");
+    			$("#submit_password_modify").removeAttr("disabled");
+    		}else{
+    			$("#password_warning").text("两次输入不一致");
+    			$("#password_warning").attr("style","color:red");
+    			$("#submit_password_modify").attr("disabled","disabled");
+    		}
+    	};
+
+    	// 这里使用最原始的js语法实现，可对应换成jquery语法进行逻辑控制
+	
+    //隐藏text block，显示password block
+		function hideShowPsw(){
+			var demoImg = document.getElementById("demo_img");
+			var demoInput = document.getElementById("userself_password");
+			if (demoInput.type == "password") {
+				demoInput.type = "text";
+				demo_img.src = "./img/invisible.png";
+			}else {
+				demoInput.type = "password";
+				demo_img.src = "./img/visible.png";
+			}
+		}
+
+    </script>
+</head>
+<body>
+<div class="container">
+	<div class="row clearfix">
+		<div class="col-md-12 column">
+			<div class="row clearfix">
+				<div class="col-md-8 column">
+					<div class="page-header">
+						<h1>
+							哈尔滨工业大学 <small>微信校园门户管理系统</small>
+						</h1>
+					</div>
+				</div>
+				<div class="col-md-4 column">
+					<a href="user_main.html">
+						<img alt="14x30" src="./img/HIT_logo.png" height="93" />
+					</a>
+				</div>
+			</div>
+			<ul class="nav nav-tabs nav-justified">
+				<li><a href="#" id="user_follow_management">我的关注</a></li>
+	            <li><a href="#" id="user_service_management">服务列表</a></li>
+	            <li class="active"><a href="#" id="userself_information_management">个人信息</a></li>
+			</ul>
+		</div>
+	</div>
+
+	<div class="row clearfix">
+		<div class="col-md-12 column">
+			<div class="col-md-6 col-md-offset-3 column" style="margin-top:30px">
+				<form class="form-horizontal" role="form" id="userself_form">
+					<div class="form-group">
+						<label class="control-label col-md-2" for="id" style="margin-top: 3px">学工号：</label>
+						<div class="col-md-8">
+							<input type="text" class="form-control" id="userself_id" maxlength="25" readonly />
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="control-label col-md-2" for="password" style="margin-top: 3px">密码：</label>
+						<div class="col-sm-7">
+					 		<input type="password" class="form-control" id="userself_password" maxlength="25" readonly/>
+						</div>
+						<img id="demo_img" class="col-sm-1" style="margin-top: 5px;padding-left: 0px" onclick="hideShowPsw()" src="./img/visible.png" width="25" height="25">
+						<button type="button" class="btn btn-default col-sm-2" id="userself_password_modify">修改</button>
+					</div>
+					<div class="form-group">
+						<label class="control-label col-md-2" for="wechat_id" style="margin-top: 3px">微信号：</label>
+						<div class="col-md-8">
+							<input type="text" class="form-control" id="userself_wechat_id" maxlength="25" readonly/>
+						</div>
+						<button type="button" class="btn btn-default col-sm-2" id="userself_wechat_id_modify">修改</button>
+					</div>
+					<div class="form-group">
+						<label class="control-label col-md-2" for="username" style="margin-top: 6px">用户名：</label>
+						<div class="col-md-8">
+							<input type="text" class="form-control" id="userself_username" maxlength="25" readonly/>
+						</div>
+						<button type="button" class="btn btn-default col-sm-2" id="userself_username_modify">修改</button>
+					</div>
+
+					<!-- <button type="submit" class="btn btn-default">Submit</button> -->
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="modal fade" id="wechat_id_and_username" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title" id="myModalLabel">请输入新的</h4>
+            </div>
+            <div class="modal-body">
+				<input type="text" class="form-control" id="new_value" maxlength="25" autofocus="autofocus" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                <button type="button" id="submit_modify" class="btn btn-primary">提交</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal -->
+</div>
+
+<div class="modal fade" id="password_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">密码修改</h4>
+            </div>
+      		<div class="modal-body">
+      			<form role="form" class="form-horizontal">
+					<div class="form-group">
+						<label class="col-md-3 control-label" for="new_password0">新密码：</label>
+						<div class="col-md-9">
+							<input type="password" class="form-control" id="new_password0" maxlength="25" autofocus="autofocus" />
+							<p id="password_warning"></p>
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="col-md-3 control-label" for="new_password1">再输入一遍：</label>
+						<div class="col-md-9">
+							<input type="password" class="form-control" id="new_password1" maxlength="25" onchange="checkPassword(this.value)"/>
+						</div>
+					</div>
+				</form> 
+       		</div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal" >关闭</button>
+                <button type="button" id="submit_password_modify" class="btn btn-primary" disabled="disabled">提交</button>
+            </div>
+        
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal -->
+</div>
+
+</body>
+</html>
